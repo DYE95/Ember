@@ -40,6 +40,7 @@ const UPLOADS = path.join(DATA, "uploads");
 const VIDEO_EXT = ["mp4", "m4v", "webm", "mkv", "mov", "ogv"];
 const clients = new Set();
 const presence = new Map();
+const MAX_PRESENCE = 200;
 let presenceSent = "";
 
 const CRASH_LOG = path.join(DATA, "crash.log");
@@ -177,6 +178,16 @@ function remember(session, entry) {
   if (!session.undo) session.undo = [];
   session.undo.push(entry);
   if (session.undo.length > 15) session.undo.shift();
+}
+
+// Fuer /api/update: kein Warten auf Eingaben (Passwort, SSH-Frage), Frist 60 s.
+function updateExecOptions(cwd) {
+  return {
+    cwd,
+    stdio: "pipe",
+    timeout: 60000,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "never", GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND || "ssh -o BatchMode=yes" },
+  };
 }
 
 function send(res, status, body) {
@@ -344,7 +355,7 @@ function checkTriggers(session, enc, token) {
 }
 
 function denyUnlessGm(res, state, body) {
-  if (isGm(state, body)) return false;
+  if (isGm(state, body, res.req)) return false;
   send(res, 403, { error: "Nur der SL." });
   return true;
 }
@@ -542,7 +553,7 @@ async function handleApi(req, res, url) {
   if (method === "PATCH" && patchChar) {
     const body = await readJson(req);
     const state = store.read();
-    const gm = isGm(state, body);
+    const gm = isGm(state, body, req);
     delete body.id;
     delete body.as;
     delete body.gmKey;
@@ -601,7 +612,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/settings") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body) && !isLocalRequest(req)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req) && !isLocalRequest(req)) return send(res, 403, { error: "Nur der SL." });
     delete body.as;
     delete body.gmKey;
     state.settings = { ...(state.settings || {}), ...body };
@@ -615,7 +626,7 @@ async function handleApi(req, res, url) {
     // Alt: JSON mit base64 bleibt fuer kleine Clips erhalten.
     const body = raw ? { as: "gm", gmKey: String(req.headers["x-ember-gmkey"] || "") } : await readJson(req);
     const state = store.read();
-    if (!isGm(state, body) && !isLocalRequest(req)) {
+    if (!isGm(state, body, req) && !isLocalRequest(req)) {
       req.resume();
       return send(res, 403, { error: "Nur der SL." });
     }
@@ -798,12 +809,16 @@ async function handleApi(req, res, url) {
 
   if (method === "POST" && p === "/api/presence") {
     const body = await readJson(req);
-    const key = body.key || id("seat");
+    // Jeder darf pingen (auch ueber den Tunnel): Texte kurz halten, Liste deckeln.
+    const short = (v, n) => String(v == null ? "" : v).slice(0, n);
+    const key = short(body.key, 80) || id("seat");
     const row = {
-      key, role: body.role || "player", name: body.name || "Unbekannt",
-      characterId: body.characterId || null, status: body.status || "online",
-      detail: body.detail || "", at: Date.now(),
+      key, role: short(body.role, 20) || "player", name: short(body.name, 80) || "Unbekannt",
+      characterId: body.characterId ? short(body.characterId, 80) : null, status: short(body.status, 20) || "online",
+      detail: short(body.detail, 200), at: Date.now(),
     };
+    if (!presence.has(key)) presenceList();
+    if (!presence.has(key) && presence.size >= MAX_PRESENCE) return send(res, 429, { error: "Zu viele Geräte." });
     presence.set(key, row);
     const state = store.read();
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
@@ -840,7 +855,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -852,7 +867,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/token") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -877,7 +892,7 @@ async function handleApi(req, res, url) {
     if (!session || !session.map) return send(res, 400, { error: "Keine Karte." });
     const token = session.map.tokens.find((t) => t.id === body.id);
     if (!token) return send(res, 404, { error: "Token fehlt." });
-    if (!isGm(state, body) && (!body.characterId || token.characterId !== body.characterId)) {
+    if (!isGm(state, body, req) && (!body.characterId || token.characterId !== body.characterId)) {
       return send(res, 403, { error: "Nur das eigene Token." });
     }
     if (body.rev != null && Number(body.rev) !== Number(token.rev || 0)) {
@@ -897,7 +912,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/fow") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -914,7 +929,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/image") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -931,7 +946,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/brush") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     const enc = store.activeEncounter(session);
@@ -946,7 +961,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/trap") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     const enc = store.activeEncounter(session);
@@ -958,7 +973,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/zone") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     const enc = store.activeEncounter(session);
@@ -973,7 +988,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/encounter") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -994,7 +1009,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/encounter/select") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -1008,7 +1023,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/encounter/status") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     const enc = store.activeEncounter(session);
@@ -1028,7 +1043,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/initiative") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     const before = initiative.spoken(session);
@@ -1044,7 +1059,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/voice") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     session.narrating = true;
@@ -1056,7 +1071,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/undo") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session || !session.undo || !session.undo.length) return send(res, 400, { error: "Nichts zum Zurücknehmen." });
     const entry = session.undo.pop();
@@ -1080,7 +1095,7 @@ async function handleApi(req, res, url) {
     if (!session) return send(res, 400, { error: "Keine Session." });
     const character = state.characters.find((c) => c.id === body.characterId);
     if (!character) return send(res, 404, { error: "Bogen fehlt." });
-    const gm = isGm(state, body);
+    const gm = isGm(state, body, req);
     const seatOk = session.seats && session.seats[character.id] === body.seat;
     if (!gm && !seatOk) return send(res, 403, { error: "Nur der eigene Sitz." });
     const long = body.kind === "long";
@@ -1136,7 +1151,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/fear-spend") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     const camp = state.campaigns.find((c) => c.id === session.campaignId);
@@ -1150,7 +1165,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/handout") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     if (!session.handouts) session.handouts = [];
@@ -1184,7 +1199,7 @@ async function handleApi(req, res, url) {
     if (!session) return send(res, 400, { error: "Keine Session." });
     const amount = Math.max(0, Number(body.amount || 0));
     if (body.tokenId) {
-      if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+      if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
       const token = (session.map?.tokens || []).find((t) => t.id === body.tokenId);
       if (!token) return send(res, 404, { error: "Foe fehlt." });
       token.stress = Math.min(Number(token.stressMax || 99), Number(token.stress || 0) + amount);
@@ -1194,7 +1209,7 @@ async function handleApi(req, res, url) {
     }
     const character = state.characters.find((c) => c.id === body.characterId);
     if (!character) return send(res, 404, { error: "Bogen fehlt." });
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     character.hpMarked = clamp(Number(character.hpMarked || 0) + amount, 0, character.hpMax || 6);
     addLog(session, { kind: "note", author: "Schaden", text: character.name + " +" + amount + " HP (" + character.hpMarked + "/" + character.hpMax + ")" });
     store.write(state); emitState();
@@ -1203,7 +1218,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/foe") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -1238,18 +1253,20 @@ async function handleApi(req, res, url) {
     if (!local) return send(res, 403, { error: "Update nur am SL-Rechner." });
 
     try {
-      const cwd = __dirname;
-      const before = execSync("git rev-parse HEAD", { cwd }).toString().trim();
-      execSync("git fetch --all --prune", { cwd, stdio: "pipe" });
-      const pullLog = execSync("git pull --ff-only", { cwd }).toString().trim();
-      const after = execSync("git rev-parse HEAD", { cwd }).toString().trim();
+      // execSync haelt den ganzen Server an. Darum: nie auf eine Passwort-
+      // Abfrage warten und nach einer Frist abbrechen.
+      const opts = updateExecOptions(__dirname);
+      const before = execSync("git rev-parse HEAD", opts).toString().trim();
+      execSync("git fetch --all --prune", opts);
+      const pullLog = execSync("git pull --ff-only", opts).toString().trim();
+      const after = execSync("git rev-parse HEAD", opts).toString().trim();
       const changed = before !== after;
 
       let installLog = "";
       if (changed) {
-        const diff = execSync(`git diff --name-only ${before} ${after}`, { cwd }).toString();
+        const diff = execSync(`git diff --name-only ${before} ${after}`, opts).toString();
         if (diff.split("\n").some((f) => f.trim() === "package.json")) {
-          installLog = execSync("npm install --omit=dev", { cwd }).toString();
+          installLog = execSync("npm install --omit=dev", { ...opts, timeout: 300000 }).toString();
         }
       }
 
@@ -1435,18 +1452,16 @@ async function handleApi(req, res, url) {
     return send(res, 200, libraryIndex());
   }
   if (method === "GET" && p === "/api/errata") {
-    const file = path.join(LIBRARY, "errata.json");
-    return send(res, 200, { notes: fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : [] });
+    return send(res, 200, { notes: readJsonFile(path.join(LIBRARY, "errata.json"), []) });
   }
 
   if (method === "GET" && p === "/api/cards") {
-    const file = path.join(PUBLIC, "data", "cards.json");
-    return send(res, 200, { cards: fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : [] });
+    return send(res, 200, { cards: readJsonFile(path.join(PUBLIC, "data", "cards.json"), []) });
   }
   if (method === "POST" && p === "/api/session/map/wall") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -1458,7 +1473,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/map/door") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     store.activeEncounter(session);
@@ -1475,7 +1490,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/journal") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     session.journal = session.journal || [];
@@ -1487,7 +1502,7 @@ async function handleApi(req, res, url) {
   if (method === "POST" && p === "/api/session/scene-track") {
     const body = await readJson(req);
     const state = store.read();
-    if (!isGm(state, body)) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, body, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     if (!session) return send(res, 400, { error: "Keine Session." });
     const enc = store.activeEncounter(session);
@@ -1537,14 +1552,14 @@ async function handleApi(req, res, url) {
     const state = store.read();
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     const rows = session?.handouts || [];
-    if (isGm(state, { as: "gm", gmKey: url.searchParams.get("gmKey") || "" })) return send(res, 200, { handouts: rows });
+    if (isGm(state, { as: "gm", gmKey: url.searchParams.get("gmKey") || "" }, req)) return send(res, 200, { handouts: rows });
     const who = url.searchParams.get("characterId") || "";
     return send(res, 200, { handouts: rows.filter((h) => !h.toId || h.toId === who) });
   }
   if (method === "GET" && p === "/api/spur") return send(res, 200, { games: spur.list() });
   if (method === "GET" && p === "/api/session/journal") {
     const state = store.read();
-    if (!isGm(state, { as: "gm", gmKey: url.searchParams.get("gmKey") || "" })) return send(res, 403, { error: "Nur der SL." });
+    if (!isGm(state, { as: "gm", gmKey: url.searchParams.get("gmKey") || "" }, req)) return send(res, 403, { error: "Nur der SL." });
     const session = state.sessions.find((s) => s.id === state.active.sessionId);
     return send(res, 200, { journal: session?.journal || [] });
   }

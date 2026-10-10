@@ -144,3 +144,40 @@ test("Leitstelle nur am SL-Rechner", async () => {
   const remoteVersion = await request("GET", "/api/leitstelle/version", { headers: { "x-forwarded-for": "203.0.113.9" } });
   assert.equal(remoteVersion.status, 403);
 });
+
+test("ohne SL-Schluessel ist ueber den Tunnel niemand SL", async () => {
+  const tunnel = await postJson("/api/session/log", { as: "gm", text: "x" }, { "cf-connecting-ip": "203.0.113.9" });
+  assert.equal(tunnel.status, 403);
+  const lan = await postJson("/api/quickstart/sablewood", { as: "gm" }, { "x-forwarded-for": "" });
+  assert.equal(lan.status, 403);
+  const local = await postJson("/api/session/log", { as: "gm", text: "x" });
+  assert.notEqual(local.status, 403);
+});
+
+test("Presence kuerzt fremde Texte", async () => {
+  const res = await postJson("/api/presence", { key: "k".repeat(500), name: "N".repeat(5000), detail: "d".repeat(5000) }, { "cf-connecting-ip": "203.0.113.9" });
+  assert.equal(res.status, 200);
+  assert.equal(res.json.key.length, 80);
+  const state = await request("GET", "/api/state");
+  const row = state.json.presence.find((p) => p.key === res.json.key);
+  assert.equal(row.name.length, 80);
+  assert.equal(row.detail.length, 200);
+});
+
+test("Karten und Errata kommen als Liste", async () => {
+  const cards = await request("GET", "/api/cards");
+  assert.equal(cards.status, 200);
+  assert.ok(Array.isArray(cards.json.cards));
+  const errata = await request("GET", "/api/errata");
+  assert.equal(errata.status, 200);
+  assert.ok(Array.isArray(errata.json.notes));
+});
+
+test("Update fragt nie nach einem Passwort und hat eine Frist", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+  const block = src.slice(src.indexOf('p === "/api/update"'), src.indexOf('p === "/api/solo/game"'));
+  assert.ok(/updateExecOptions\(/.test(block));
+  assert.ok(!/execSync\([^)]*\{ cwd \}\)/.test(block), "kein execSync ohne Frist");
+  assert.ok(/GIT_TERMINAL_PROMPT: "0"/.test(src));
+  assert.ok(/timeout: 60000/.test(src));
+});
