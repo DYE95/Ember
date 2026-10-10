@@ -12,8 +12,21 @@ test("isGm braucht as=gm", () => {
   assert.equal(isGm(null, { as: "gm" }), false);
 });
 
-test("ohne bekannten Schluessel ist der SL offen", () => {
-  assert.equal(isGm(stateWith(null), { as: "gm" }), true);
+test("ohne bekannten Schluessel ist der SL nur am SL-Rechner offen", () => {
+  assert.equal(isGm(stateWith(null), { as: "gm" }, fakeReq("127.0.0.1")), true);
+  assert.equal(isGm(stateWith(null), { as: "gm" }, fakeReq("192.168.1.20")), false);
+  assert.equal(isGm(stateWith(null), { as: "gm" }, fakeReq("127.0.0.1", { "cf-connecting-ip": "203.0.113.9" })), false);
+  assert.equal(isGm(stateWith(null), { as: "gm" }), false);
+});
+
+test("leerer Proxy-Header zaehlt trotzdem als Tunnel", () => {
+  assert.equal(isLocalRequest(fakeReq("127.0.0.1", { "x-forwarded-for": "" })), false);
+});
+
+test("recordGmKey nimmt keinen Riesen-Schluessel", () => {
+  const state = { settings: {} };
+  assert.equal(recordGmKey(state, { role: "gm", gmKey: "x".repeat(201) }, "127.0.0.1"), false);
+  assert.equal(state.settings.gmKey, undefined);
 });
 
 test("falscher Schluessel wird abgelehnt", () => {

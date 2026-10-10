@@ -129,3 +129,39 @@ test("makeCharacter setzt Standardwerte und eine vierstellige PIN", () => {
   assert.equal(c.hopeMax, 6);
   assert.match(c.playerPin, /^\d{4}$/);
 });
+
+test("kaputte ember.json: Stand kommt aus ember.json.bak, kaputte Datei bleibt liegen", () => {
+  const fs = require("fs");
+  const os = require("os");
+  const path = require("path");
+  const { execFileSync } = require("child_process");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ember-kaputt-"));
+  try {
+    fs.writeFileSync(path.join(dir, "ember.json.bak"), JSON.stringify({ settings: { houseName: "Gerettet" }, campaigns: [], characters: [], sessions: [] }));
+    fs.writeFileSync(path.join(dir, "ember.json"), "{ halb");
+    const out = execFileSync(process.execPath, ["-e", "process.stdout.write(require('./lib/store').read().settings.houseName)"], {
+      cwd: path.join(__dirname, ".."), env: { ...process.env, EMBER_DATA: dir }, stdio: ["ignore", "pipe", "ignore"],
+    }).toString();
+    assert.equal(out, "Gerettet");
+    assert.ok(fs.readdirSync(dir).some((f) => f.startsWith("ember.json.kaputt-")));
+    JSON.parse(fs.readFileSync(path.join(dir, "ember.json"), "utf8"));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Solo-Spielstand mit stats: null stuerzt nicht ab", () => {
+  const fs = require("fs");
+  const os = require("os");
+  const path = require("path");
+  const soloGame = require("../lib/solo-game");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ember-solo-"));
+  try {
+    fs.writeFileSync(path.join(dir, "solo.json"), JSON.stringify({ profile: null, run: null, stats: null }));
+    assert.deepEqual(soloGame.load(dir).stats, { wins: 0, losses: 0, runs: 0 });
+    fs.writeFileSync(path.join(dir, "solo.json"), "null");
+    assert.deepEqual(soloGame.load(dir).stats, { wins: 0, losses: 0, runs: 0 });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
