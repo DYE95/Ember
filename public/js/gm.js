@@ -75,7 +75,7 @@ function renderHud() {
   q.forEach((item) => {
     const el = document.createElement("div");
     el.className = "card";
-    el.innerHTML = `<div class="name">${item.name}</div><div class="meta">${item.action || "Want Spotlight"}<br>${item.question || ""}</div>`;
+    el.innerHTML = `<div class="name">${esc(item.name)}</div><div class="meta">${esc(item.action || "Want Spotlight")}<br>${esc(item.question)}</div>`;
     const ok = document.createElement("button");
     ok.className = "btn tiny primary";
     ok.textContent = "Gib ihnen das Licht";
@@ -355,7 +355,7 @@ function renderSession() {
     }).forEach((entry) => {
       const el = document.createElement("div");
       el.className = `log-item ${entry.kind}`;
-      el.innerHTML = `<div class="who">${entry.author}</div><div class="txt">${entry.text}</div>`;
+      el.innerHTML = `<div class="who">${esc(entry.author)}</div><div class="txt">${esc(entry.text)}</div>`;
       log.appendChild(el);
     });
     log.scrollTop = log.scrollHeight;
@@ -581,8 +581,14 @@ async function loadCompendium() {
   const q = $("#compQ")?.value || "";
   const kind = $("#compKind")?.value || "";
   const scope = $("#compScope")?.value || "";
-  const res = await fetch("/api/compendium?q=" + encodeURIComponent(q) + "&kind=" + encodeURIComponent(kind) + "&scope=" + encodeURIComponent(scope));
-  const data = await res.json();
+  const ticket = ++compTicket;
+  let data;
+  try {
+    const res = await fetch("/api/compendium?q=" + encodeURIComponent(q) + "&kind=" + encodeURIComponent(kind) + "&scope=" + encodeURIComponent(scope));
+    data = await res.json();
+  } catch { return; }
+  // Eine spaetere Suche ist schon unterwegs: alte Antwort nicht mehr malen.
+  if (ticket !== compTicket) return;
   const box = $("#compList");
   const sel = $("#compKind");
   if (sel && sel.options.length < 2 && data.kinds) {
@@ -593,9 +599,11 @@ async function loadCompendium() {
     });
   }
   if (!box) return;
-  box.innerHTML = (data.entries || []).map((e) => `<div class="card"><div class="name">${e.name}</div><div class="meta">${e.kind} · ${e.text}</div></div>`).join("") || "<p class='hint'>Nichts dazu.</p>";
+  box.innerHTML = (data.entries || []).map((e) => `<div class="card"><div class="name">${esc(e.name)}</div><div class="meta">${esc(e.kind)} · ${esc(e.text)}</div></div>`).join("") || "<p class='hint'>Nichts dazu.</p>";
 }
-$("#compQ")?.addEventListener("input", loadCompendium);
+let compTicket = 0;
+let compTimer = 0;
+$("#compQ")?.addEventListener("input", () => { clearTimeout(compTimer); compTimer = setTimeout(loadCompendium, 200); });
 $("#compKind")?.addEventListener("change", loadCompendium);
 $("#compScope")?.addEventListener("change", loadCompendium);
 loadCompendium();
@@ -713,6 +721,8 @@ $("#characterForm")?.addEventListener("submit", async (ev) => {
   }, "PATCH");
 });
 window.addEventListener("message", async (ev) => {
+  // Nur das eigene Tokenatelier (iframe) darf Tokens schicken, keine fremde Seite.
+  if (ev.origin !== location.origin) return;
   const msg = ev.data;
   if (!msg || msg.type !== "ember-token") return;
   const id = msg.charId || selectedCharacterId;
@@ -734,7 +744,7 @@ $("#rollCharacter")?.addEventListener("change", fillExperiences);
 // Alte start.bat-Staende schrieben "ECHO ist ausgeschaltet" in sl.pin; so ein
 // Rest im Browser ist kein Schluessel.
 if (/^ECHO\s/i.test(localStorage.getItem("ember.gmKey") || "")) localStorage.removeItem("ember.gmKey");
-if (!localStorage.getItem("ember.gmKey")) localStorage.setItem("ember.gmKey", "gm_" + Math.random().toString(16).slice(2));
+if (!localStorage.getItem("ember.gmKey")) localStorage.setItem("ember.gmKey", "gm_" + [...crypto.getRandomValues(new Uint8Array(12))].map((b) => b.toString(16).padStart(2, "0")).join(""));
 // Sitz bleibt fest, der Schluessel wird jedes Mal frisch gelesen: /api/sl-pin
 // kann ihn nach dem Laden noch auf die PIN aus data/sl.pin setzen.
 const gmSeat = localStorage.getItem("ember.gmKey");

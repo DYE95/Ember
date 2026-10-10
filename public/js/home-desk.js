@@ -140,8 +140,10 @@ function openPanel(id) {
 
 function activate(item) {
   if (item.href) {
-    if (/^https?:/i.test(item.href)) window.open(item.href, "_blank", "noopener");
-    else location.href = item.href;
+    const href = String(item.href).trim();
+    if (/^https?:/i.test(href)) window.open(href, "_blank", "noopener");
+    // Eigene Kacheln: nur http(s) oder Pfade, kein javascript:/data: und Co.
+    else if (!/^[a-z][a-z0-9+.-]*:/i.test(href)) location.href = href;
   } else if (item.panel) openPanel(item.panel);
   else if (item.toggle) setPanelMode(state.panelMode === "settings" ? "leitstelle" : "settings");
 }

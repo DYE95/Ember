@@ -47,6 +47,7 @@
       function up() {
         handle.removeEventListener("pointermove", move);
         handle.removeEventListener("pointerup", up);
+        handle.removeEventListener("pointercancel", up);
         var box = panel.getBoundingClientRect();
         var state = load();
         state[panel.id] = {
@@ -56,8 +57,12 @@
         };
         save(state);
       }
+      // Zeiger festhalten: sonst reisst der Zug ab, sobald die Maus den Griff verlaesst,
+      // und ein Loslassen daneben laesst das Fenster weiter an der Maus kleben.
+      try { handle.setPointerCapture(ev.pointerId); } catch (e) {}
       handle.addEventListener("pointermove", move);
       handle.addEventListener("pointerup", up);
+      handle.addEventListener("pointercancel", up);
     });
   }
 

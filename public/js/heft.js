@@ -134,8 +134,14 @@ function setSidebar(open) {
   else $("sidebar").removeAttribute("inert");
 }
 
+// crypto.randomUUID gibt es nur auf https oder localhost, nicht ueber http://192.168…
+function noteId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return "n-" + Date.now().toString(36) + "-" + [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function createNote() {
-  const note = { id: crypto.randomUUID(), body: "", createdAt: Date.now(), updatedAt: Date.now() };
+  const note = { id: noteId(), body: "", createdAt: Date.now(), updatedAt: Date.now() };
   notes.unshift(note);
   activeId = note.id;
   preview = false;

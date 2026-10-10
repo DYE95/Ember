@@ -364,15 +364,20 @@ async function saveToSheet() {
   const data = canvas.toDataURL("image/png").split(",")[1];
   const color = BY_ID.get(Studio.color)?.hex || "#e85d04";
   if (window.parent && window.parent !== window) {
-    window.parent.postMessage({ type: "ember-token", data, color, charId }, "*");
+    window.parent.postMessage({ type: "ember-token", data, color, charId }, location.origin);
     return;
   }
   if (!charId) { alert("Kein Bogen gewählt."); return; }
-  await fetch("/api/characters/" + charId + "/portrait", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data, color }),
-  });
+  // Portraits setzt nur der SL: Schluessel mitschicken und die Antwort pruefen.
+  let res = null;
+  try {
+    res = await fetch("/api/characters/" + charId + "/portrait", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data, color, as: "gm", gmKey: localStorage.getItem("ember.gmKey") || "" }),
+    });
+  } catch {}
+  if (!res || !res.ok) { alert("Token nicht gespeichert. Nur am SL-Rechner, Server muss laufen."); return; }
   alert("Token liegt auf dem Bogen.");
 }
 
