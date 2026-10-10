@@ -59,3 +59,36 @@ test("Spiel zurücksetzen löscht Held und Lauf", () => {
   assert.equal(reset.body.save.profile, null);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+// Aus der Code-Review (Solo).
+test("Fehlermeldungen bleiben stehen, bis die nächste Aktion klappt", () => {
+  assert.match(js, /if \(notice\) rows\.unshift\(/, "renderLog zeigt die Meldung weiter");
+  assert.match(js, /call\("\/api\/solo\/game\/act", \{ action \}\);\n\s+notice = null;/, "erst nach Erfolg weg");
+  assert.match(html, /id="log" aria-live="polite"/);
+});
+
+test("Anderer Held setzt die Level-Wahl zurück, Tastenkürzel ruhen in Feldern", () => {
+  assert.match(js, /\/api\/solo\/game\/new", \{ hero: h\.key \}\);\n\s+notice = null;\n\s+levelPick = "";/);
+  assert.match(js, /ev\.target\.closest\("input, textarea, select, \[contenteditable\]"\)/);
+  assert.match(js, /\[h\.ancestry, h\.class, `Level \$\{h\.level\}`\]\.filter\(Boolean\)\.join\(" · "\)/);
+});
+
+test("Handy: eine Spalte unter 900 px, ruhige Würfel bei reduzierter Bewegung", () => {
+  const mobile = css.slice(css.indexOf("@media (max-width: 900px)"));
+  assert.match(mobile, /\.sg-main \{ grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{ \.die\.rolling \{ animation: none; \} \}/);
+  assert.match(css, /font-size: max\(12px, /);
+  assert.match(html, /solo-game\.css\?v=3/);
+  assert.match(html, /solo-game\.js\?v=3/);
+});
+
+test("Leitstelle: Neustart lädt neu, auch ohne bekannten Stand", () => {
+  const reg = fs.readFileSync(path.join(ROOT, "public", "js", "leitstelle", "registry.js"), "utf8");
+  assert.match(reg, /const before = ctx\.state && ctx\.state\.server \? ctx\.state\.server\.startedAt : null;/);
+  assert.match(reg, /before == null \? i >= 2/);
+});
+
+test("Scharfschuss: Leertaste auf einem Knopf gehört dem Knopf", () => {
+  const ui = fs.readFileSync(path.join(ROOT, "public", "js", "scharf", "ui.js"), "utf8");
+  assert.match(ui, /closest\("button, a, input, select, textarea"\)\) return;/);
+});

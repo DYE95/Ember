@@ -39,9 +39,12 @@ async function call(path, body) {
   return data;
 }
 
+// Meldung (Fehler, Level-Up) bleibt oben im Log stehen, bis die naechste
+// Aktion klappt. Sonst loescht renderLog() sie sofort wieder.
+let notice = null;
 function say(text, kind = "bad") {
-  const log = $("#log");
-  log.prepend(el("li", { class: kind, text }));
+  notice = { text, kind };
+  $("#log").prepend(el("li", { class: kind, text }));
 }
 
 const run = () => game && game.save && game.save.run;
@@ -51,7 +54,9 @@ const room = () => run() && run().rooms.find((r) => r.id === run().at);
 
 function renderLog() {
   const log = $("#log");
-  log.replaceChildren(...(run() ? run().log.slice(0, 3) : []).map((row) => el("li", { class: row.kind, text: row.text })));
+  const rows = (run() ? run().log.slice(0, 3) : []).map((row) => el("li", { class: row.kind, text: row.text }));
+  if (notice) rows.unshift(el("li", { class: notice.kind, text: notice.text }));
+  log.replaceChildren(...rows);
 }
 
 function icons(box, name, filled, total) {
@@ -63,7 +68,7 @@ function renderHero() {
   const h = run().hero;
   $("#heroColor").style.background = h.color || "#e74806";
   $("#heroName").textContent = h.name;
-  $("#heroSub").textContent = `${h.ancestry ? `${h.ancestry} · ` : ""}${h.class} · Level ${h.level}`;
+  $("#heroSub").textContent = [h.ancestry, h.class, `Level ${h.level}`].filter(Boolean).join(" · ");
   icons($("#hp"), "heart", h.hpMax - h.hp, h.hpMax);
   $("#stress").replaceChildren(...Array.from({ length: h.stressMax }, (_, i) => el("i", { class: i < h.stress ? "on" : "" })));
   icons($("#hope"), "flame", h.hope, h.hopeMax);
@@ -338,6 +343,7 @@ async function act(action) {
   let turn = null;
   try {
     const data = await call("/api/solo/game/act", { action });
+    notice = null;
     if (data.roll && data.roll.hopeDie) await animate(data.roll);
     game = data;
     const ft = run() && run().foeTurn;
@@ -386,6 +392,8 @@ async function newGame(h) {
     && !confirm(`Laufendes Spiel mit ${game.save.profile.name} beenden und neu anfangen?`)) return;
   try {
     game = await call("/api/solo/game/new", { hero: h.key });
+    notice = null;
+    levelPick = "";
     $("#startScreen").hidden = true;
     resetDice();
     render();
@@ -486,7 +494,7 @@ $("#btnMenuFull").addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (ev) => {
-  if (ev.target.closest("input")) return;
+  if (ev.target.closest("input, textarea, select, [contenteditable]")) return;
   if (ev.key === "Escape") {
     document.querySelectorAll("#menuScreen, #restScreen").forEach((n) => { n.hidden = true; });
     return;

@@ -274,3 +274,19 @@ a { color: var(--lantern); }
 .sg-font-row { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
 .sg-font-row .sg-btn.big { min-width: 5rem; }
 .sg-font-row b { min-width: 4.5rem; text-align: center; font-size: 1.2rem; }
+
+/* Kleinste Schrift auch bei 12 px in den Einstellungen noch lesbar. */
+html { font-size: max(12px, calc(clamp(14px, 1vw, 48px) * var(--sg-scale, 1))); color-scheme: dark; }
+.sg-facts dd { overflow-wrap: anywhere; }
+.sg-main > * { min-height: 0; }
+@media (prefers-reduced-motion: reduce) { .die.rolling { animation: none; } }
+
+/* Handy und schmale Fenster: eine Spalte, die Seite scrollt. */
+@media (max-width: 900px) {
+  .sg { height: auto; min-height: 100dvh; overflow: visible; }
+  .sg-main { grid-template-columns: minmax(0, 1fr); padding: 0.8rem; }
+  .sg-hero, .sg-side { overflow: visible; }
+  .sg-props img { height: 5rem; }
+  .sg-foe { min-width: 0; }
+  .sg-foe img { height: 4rem; }
+}

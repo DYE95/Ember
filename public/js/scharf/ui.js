@@ -195,6 +195,8 @@ canvas.addEventListener("contextmenu", (ev) => {
 });
 window.addEventListener("keydown", (ev) => {
   if (!playing) return;
+  // Fokus auf Knopf oder Eingabe: Leertaste/Ziffern gehoeren dem Element.
+  if (ev.target && ev.target.closest && ev.target.closest("button, a, input, select, textarea")) return;
   if (ev.key === "1") sim.togglePlace("mg");
   else if (ev.key === "2") sim.togglePlace("sniper");
   else if (ev.key === "3") sim.togglePlace("mortar");

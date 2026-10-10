@@ -117,6 +117,8 @@
     restarting = true;
     const say = typeof onStatus === "function" ? onStatus : () => {};
     say("Neustart …");
+    // Startzeit vorher merken. Ohne bekannten Stand: neu laden, sobald der Server nach ein paar Sekunden antwortet.
+    const before = ctx.state && ctx.state.server ? ctx.state.server.startedAt : null;
     try { await fetch("/api/restart", { method: "POST" }); } catch {}
     let down = false;
     for (let i = 0; i < 90; i += 1) {
@@ -125,7 +127,7 @@
         const res = await fetch("/api/leitstelle", { cache: "no-store" });
         if (res.ok) {
           const s = await res.json();
-          const fresh = ctx.state && s.server && s.server.startedAt !== ctx.state.server.startedAt;
+          const fresh = before == null ? i >= 2 : Boolean(s.server && s.server.startedAt !== before);
           if (fresh || down) { location.reload(); return; }
         }
       } catch {
