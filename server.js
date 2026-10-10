@@ -85,6 +85,9 @@ const MIME = {
   ".mov": "video/quicktime",
   ".ogv": "video/ogg",
   ".pdf": "application/pdf",
+  ".woff2": "font/woff2",
+  ".ico": "image/x-icon",
+  ".mjs": "text/javascript; charset=utf-8",
 };
 
 function presenceList() {

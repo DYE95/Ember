@@ -1,4 +1,5 @@
 const $ = (sel) => document.querySelector(sel);
+function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 let state = { characters: [], sessions: [], active: {}, media: [] };
 const seatParams = new URLSearchParams(location.search);
 const askedId = seatParams.get("as") || seatParams.get("bogen") || "";
@@ -315,7 +316,7 @@ function render() {
     const kind = $("#playLogKind")?.value || "";
     const rows = (sesTurn?.log || []).filter((e) => (e.kind === "roll" || e.kind === "note") && (!kind || e.kind === kind) && (!q || (e.text + e.author).toLowerCase().includes(q))).slice(-8);
     playLog.classList.toggle("hidden", !rows.length);
-    playLog.innerHTML = rows.map((e) => `<div class="log-item ${e.kind}"><div class="who">${e.author}</div><div class="txt">${e.text}</div></div>`).join("");
+    playLog.innerHTML = rows.map((e) => `<div class="log-item ${esc(e.kind)}"><div class="who">${esc(e.author)}</div><div class="txt">${esc(e.text)}</div></div>`).join("");
   }
   const actions = ["— Aktion —",
     ...["Agility","Strength","Finesse","Instinct","Presence","Knowledge"].map((t) => `Action Roll · ${t}`),
@@ -459,8 +460,14 @@ async function loadCompendium() {
   const q = $("#compQ")?.value || "";
   const kind = $("#compKind")?.value || "";
   const scope = $("#compScope")?.value || "";
-  const res = await fetch("/api/compendium?q=" + encodeURIComponent(q) + "&kind=" + encodeURIComponent(kind) + "&scope=" + encodeURIComponent(scope));
-  const data = await res.json();
+  const ticket = ++compTicket;
+  let data;
+  try {
+    const res = await fetch("/api/compendium?q=" + encodeURIComponent(q) + "&kind=" + encodeURIComponent(kind) + "&scope=" + encodeURIComponent(scope));
+    data = await res.json();
+  } catch { return; }
+  // Eine spaetere Suche ist schon unterwegs: alte Antwort nicht mehr malen.
+  if (ticket !== compTicket) return;
   const sel = $("#compKind");
   if (sel && sel.options.length < 2 && data.kinds) {
     data.kinds.forEach((k) => {
@@ -471,9 +478,11 @@ async function loadCompendium() {
   }
   const box = $("#compList");
   if (!box) return;
-  box.innerHTML = (data.entries || []).map((e) => `<div class="card"><div class="name">${e.name}</div><div class="meta">${e.kind} · ${e.text}</div></div>`).join("") || "<p class='hint'>Nichts dazu.</p>";
+  box.innerHTML = (data.entries || []).map((e) => `<div class="card"><div class="name">${esc(e.name)}</div><div class="meta">${esc(e.kind)} · ${esc(e.text)}</div></div>`).join("") || "<p class='hint'>Nichts dazu.</p>";
 }
-$("#compQ")?.addEventListener("input", loadCompendium);
+let compTicket = 0;
+let compTimer = 0;
+$("#compQ")?.addEventListener("input", () => { clearTimeout(compTimer); compTimer = setTimeout(loadCompendium, 200); });
 $("#compKind")?.addEventListener("change", loadCompendium);
 $("#compScope")?.addEventListener("change", loadCompendium);
 $("#playLogQ")?.addEventListener("input", render);

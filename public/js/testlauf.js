@@ -153,6 +153,7 @@
   // bekommt), Stopp bei O/X/Eigen. Gespeichert wird die Summe in ms.
   let running = null; // { id, since }
   let paused = false;
+  let pausedId = "";
   const fmt = (ms) => {
     const sec = Math.max(0, Math.round(ms / 1000));
     const h = Math.floor(sec / 3600);
@@ -202,7 +203,6 @@
     chip.classList.toggle("zero", !ms && !on);
     chip.setAttribute("aria-pressed", String(on));
   }
-  let pausedId = "";
   function renderTotal() {
     let total = 0;
     for (const sec of checklist.sections) for (const it of sec.items) total += elapsed(it.id);

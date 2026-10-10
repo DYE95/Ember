@@ -25,14 +25,16 @@
   </div>
   <script>
     let cards = [];
+    const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     function paint() {
       const kind = document.querySelector("#kind").value;
       document.querySelector("#deck").innerHTML = cards.filter((c) => !kind || c.kind === kind).map((c) =>
-        `<article class="card${c.rule ? " rule" : ""}"><div class="name">${c.name}</div><div class="meta">${c.domain} · ${c.level} · ${c.kind}</div><p>${c.text}</p></article>`
+        `<article class="card${c.rule ? " rule" : ""}"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.domain)} · ${esc(c.level)} · ${esc(c.kind)}</div><p>${esc(c.text)}</p></article>`
       ).join("");
     }
     document.querySelector("#kind").addEventListener("change", paint);
-    fetch("/api/cards").then((r) => r.json()).then((data) => { cards = data.cards || []; paint(); });
+    fetch("/api/cards").then((r) => r.json()).then((data) => { cards = Array.isArray(data.cards) ? data.cards : []; paint(); })
+      .catch(() => { document.querySelector("#deck").innerHTML = "<p class='hint'>Karten nicht geladen. Läuft der Server?</p>"; });
   </script>
 </body>
 </html>

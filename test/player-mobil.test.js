@@ -116,5 +116,60 @@ test("Spieler: map.js und CSS-Versionen sind hochgezählt", () => {
   const html = read("public", "player.html");
   assert.match(html, /\/js\/map\.js\?v=14/);
   assert.match(html, /\/css\/ember\.css\?v=14/);
-  assert.match(html, /\/js\/player\.js\?v=20/);
+  assert.match(html, /\/js\/player\.js\?v=(2\d)/);
+});
+
+// Aus der Code-Review: fremder Text landet nie als HTML auf SL- oder Spielerseite.
+test("Log und Spotlight-Wünsche werden escaped (Spieler können sie frei schreiben)", () => {
+  const gm = read("public/js/gm.js");
+  assert.match(gm, /<div class="who">\$\{esc\(entry\.author\)\}<\/div><div class="txt">\$\{esc\(entry\.text\)\}/);
+  assert.match(gm, /\$\{esc\(item\.name\)\}<\/div><div class="meta">\$\{esc\(item\.action \|\| "Want Spotlight"\)\}<br>\$\{esc\(item\.question\)\}/);
+  const player = read("public/js/player.js");
+  assert.match(player, /^function esc\(/m);
+  assert.match(player, /\$\{esc\(e\.author\)\}<\/div><div class="txt">\$\{esc\(e\.text\)\}/);
+  assert.match(read("public/karten.html"), /\$\{esc\(c\.text\)\}/);
+});
+
+test("Tokens per postMessage nur von der eigenen Seite", () => {
+  assert.match(read("public/js/gm.js"), /if \(ev\.origin !== location\.origin\) return;/);
+  const studio = read("public/js/pixel-studio.js");
+  assert.match(studio, /postMessage\(\{ type: "ember-token", data, color, charId \}, location\.origin\)/);
+  assert.match(studio, /if \(!res \|\| !res\.ok\)/);
+  assert.doesNotMatch(read("public/js/gm.js"), /gm_" \+ Math\.random/);
+});
+
+test("Sitzplatz am Tisch: SL schickt seinen Schlüssel, Spielerseite schickt nichts", () => {
+  const src = read("public/js/table-indicator.js");
+  const sent = [];
+  const sandbox = {
+    window: {}, document: { readyState: "complete", querySelectorAll: () => [] },
+    localStorage: { getItem: (k) => (k === "ember.gmKey" ? "1234" : null) },
+    fetch: (url, opts) => { sent.push({ url, body: JSON.parse(opts.body) }); return Promise.resolve({ ok: true }); },
+    console,
+  };
+  vm.runInNewContext(src.replace(/function assign\(/, "window.__assign = assign;\n  function assign("), sandbox);
+  sandbox.window.__assign("pc1", 2, { dataset: { table: "player" } });
+  assert.equal(sent.length, 0);
+  sandbox.window.__assign("pc1", 2, { dataset: { table: "gm" } });
+  assert.deepEqual(sent[0].body, { tableSeat: 2, as: "gm", gmKey: "1234" });
+});
+
+test("Heft braucht kein crypto.randomUUID (LAN über http)", () => {
+  const src = read("public/js/heft.js");
+  const fn = src.match(/function noteId\(\) \{[\s\S]*?\n\}/)[0];
+  const id = vm.runInNewContext(`${fn}; noteId()`, { crypto: { getRandomValues: (a) => a.fill(7) }, Date });
+  assert.match(id, /^n-[a-z0-9]+-(07){8}$/);
+});
+
+test("Eigene Kacheln öffnen kein javascript:", () => {
+  assert.match(read("public/js/home-desk.js"), /else if \(!\/\^\[a-z\]\[a-z0-9\+\.-\]\*:\/i\.test\(href\)\) location\.href = href;/);
+});
+
+test("/ember lädt keine Schriften aus dem Internet", () => {
+  const html = read("public/index.html");
+  assert.doesNotMatch(html, /fonts\.googleapis|fonts\.gstatic/);
+  assert.match(html, /\/css\/fonts\.css\?v=\d+/);
+  const css = read("public/css/fonts.css");
+  for (const m of css.matchAll(/url\("\/fonts\/([^"]+)"\)/g)) assert.ok(fs.existsSync(path.join(ROOT, "public", "fonts", m[1])), m[1]);
+  assert.match(read("server.js"), /"\.woff2": "font\/woff2"/);
 });

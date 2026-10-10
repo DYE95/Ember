@@ -1,0 +1,7 @@
+/* Schriften lokal statt von Google Fonts: Ember laeuft auch ohne Internet.
+   Fraunces und Outfit stehen unter der SIL Open Font License (public/fonts/OFL-*.txt). */
+@font-face { font-family: Fraunces; font-style: normal; font-weight: 500; font-display: swap; src: url("/fonts/fraunces-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: Fraunces; font-style: normal; font-weight: 600; font-display: swap; src: url("/fonts/fraunces-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: Outfit; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/outfit-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: Outfit; font-style: normal; font-weight: 500; font-display: swap; src: url("/fonts/outfit-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: Outfit; font-style: normal; font-weight: 600; font-display: swap; src: url("/fonts/outfit-latin-600-normal.woff2") format("woff2"); }

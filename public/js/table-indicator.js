@@ -34,11 +34,17 @@
   function gmOnline(presence) {
     return (presence || []).some((p) => p.role === "gm");
   }
-  function assign(id, seat) {
+  // Sitzplatz am Tisch setzt nur der SL (der Server lehnt alles andere mit 403 ab).
+  // Darum der SL-Schluessel; auf der Spielerseite gar nicht erst schicken.
+  function assign(id, seat, root) {
+    if (!root || root.dataset.table !== "gm") return Promise.resolve(null);
     return fetch("/api/characters/" + id, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tableSeat: seat }),
+      body: JSON.stringify({ tableSeat: seat, as: "gm", gmKey: localStorage.getItem("ember.gmKey") || "" }),
+    }).then((res) => {
+      if (!res.ok) console.warn("Sitz nicht gespeichert:", res.status);
+      return res;
     });
   }
 
@@ -108,7 +114,7 @@
       b.textContent = c.name;
       b.setAttribute("aria-pressed", current && current.id === c.id ? "true" : "false");
       b.addEventListener("click", () => {
-        assign(c.id, selected).catch(() => {});
+        assign(c.id, selected, root).catch(() => {});
         if (opts.onSit) opts.onSit(c.id);
       });
       bar.appendChild(b);
@@ -117,7 +123,7 @@
     clear.type = "button";
     clear.textContent = "Leeren";
     clear.disabled = !current;
-    clear.addEventListener("click", () => { if (current) assign(current.id, null).catch(() => {}); });
+    clear.addEventListener("click", () => { if (current) assign(current.id, null, root).catch(() => {}); });
     bar.appendChild(clear);
     if (!chars.length) {
       const hint = document.createElement("span");

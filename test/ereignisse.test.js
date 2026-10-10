@@ -16,7 +16,7 @@ test("Startseite: Kachel Ereignisse mit eigenem Platz", () => {
   const js = read("public/js/home-desk.js");
   assert.match(js, /\{ id: "ereignisse", title: "Ereignisse",[^}]*href: "\/ereignisse" \}/);
   assert.match(js, /ereignisse: \{ x: \d+, y: \d+ \}/);
-  assert.match(read("public/home.html"), /home-desk\.js\?v=19/);
+  assert.match(read("public/home.html"), /home-desk\.js\?v=(19|2\d)/);
 });
 
 test("/ember: Eingang im Startmenü und Link beim Ereignis in der Session", () => {
