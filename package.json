@@ -3,5 +3,5 @@
   "version": "0.0.0",
   "private": true,
   "main": "server.js",
-  "scripts": { "start": "node server.js", "test": "node --test test/initiative.test.js test/dice.test.js test/solo.test.js test/store.test.js test/auth.test.js test/range.test.js test/guard.test.js test/lan.test.js test/data.test.js test/server.test.js test/qr.test.js test/leitstelle.test.js test/dungeon.test.js test/testlauf.test.js test/testlauf-server.test.js test/testlauf-upload.test.js test/codestand.test.js test/neustart.test.js test/slpin.test.js test/werkstatt.test.js test/ember-hub.test.js test/solo-ui.test.js test/ereignisse.test.js test/legion-hinweis.test.js test/player-mobil.test.js" }
+  "scripts": { "start": "node server.js", "test": "node --test test/initiative.test.js test/dice.test.js test/solo.test.js test/store.test.js test/auth.test.js test/range.test.js test/guard.test.js test/lan.test.js test/data.test.js test/server.test.js test/qr.test.js test/leitstelle.test.js test/dungeon.test.js test/testlauf.test.js test/testlauf-server.test.js test/testlauf-upload.test.js test/codestand.test.js test/neustart.test.js test/slpin.test.js test/werkstatt.test.js test/ember-hub.test.js test/solo-ui.test.js test/ereignisse.test.js test/legion-hinweis.test.js test/player-mobil.test.js test/startablauf.test.js" }
 }

@@ -4,6 +4,7 @@ Neueste oben. Die Leitstelle auf der Startseite liest diese Datei, wenn
 kein git da ist (z. B. bei einem ZIP-Download).
 
 ## Unveröffentlicht
+- Startablauf: Fenstertitel DYE.TV - Cloud OFF/ON je nach Tunnel, Glut-Animation beim Start (Taste überspringt), Browser öffnet sich einmal von selbst
 - Fix Testlauf 10.10.: Ping länger und größer sichtbar (Empfangszeit statt Serveruhr), Sitz nach Entsperren bleibt, Boden meldet Fehler, SL-PIN und Browser-Schlüssel bleiben synchron, Frage-Feld verschiebt die Karte nicht mehr
 - Politur: kaputte Adressen und JSON-Körper geben 400 statt Serverfehler, Namen mit „<“ zerlegen Karte, Bögen und Listen nicht mehr
 - Feinschliff: Legion-Verbindung nimmt eingefügte Zeilen wie „Authorization: Bearer …“ an; Spieler am Handy: Live-Verbindung kommt nach Bildschirmsperre und Tunnel-Aussetzern selbst zurück, Karte verdeckt hochkant keine Knöpfe mehr, kein Doppelwurf bei langsamem Netz

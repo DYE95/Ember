@@ -1,4 +1,4 @@
-const { execSync } = require("child_process");
+const { execSync, spawn } = require("child_process");
 
 const http = require("http");
 const fs = require("fs");
@@ -13,6 +13,8 @@ const { addresses } = require("./lib/lan");
 const { id } = require("./lib/ids");
 const catalog = require("./lib/catalog");
 const spark = require("./lib/spark");
+const glut = require("./lib/glut");
+const startablauf = require("./lib/startablauf");
 const initiative = require("./lib/initiative");
 const compendium = require("./lib/compendium");
 const solo = require("./lib/solo");
@@ -1799,6 +1801,28 @@ if (url.pathname.startsWith("/docs/bibliothek/")) {
   }
 });
 
+// Browser erst oeffnen, wenn der Server antwortet. Hoechstens einmal pro Prozess.
+const openBrowserOnce = startablauf.openOnce((url) => {
+  const deadline = Date.now() + 20000;
+  const tryOnce = () => {
+    const req = http.get(url, (res) => {
+      res.resume();
+      const { cmd, args, verbatim } = startablauf.browserCommand(url);
+      try {
+        const child = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true, windowsVerbatimArguments: Boolean(verbatim) });
+        child.on("error", () => console.log("  Browser ging nicht auf. Selbst öffnen: " + url));
+        child.unref();
+        console.log("  Browser       " + url);
+      } catch {
+        console.log("  Browser ging nicht auf. Selbst öffnen: " + url);
+      }
+    });
+    req.on("error", () => { if (Date.now() < deadline) setTimeout(tryOnce, 500); });
+    req.setTimeout(3000, () => req.destroy());
+  };
+  tryOnce();
+});
+
 server.on("error", (err) => {
   if (err && err.code === "EADDRINUSE") {
     console.log(`  Port ${PORT} ist belegt. Laeuft Ember schon in einem anderen Fenster?`);
@@ -1810,7 +1834,11 @@ server.on("error", (err) => {
 store.backup();
 
 server.listen(PORT, HOST, async () => {
-  await spark.ignite({ label: "Ember zündet" });
+  // Erster Lauf aus start.bat: Glut-Animation statt Zuendbalken, danach Browser.
+  // Bei Neustarts (Exit 42) loescht start.bat DYE_FRISCHER_START, dann beides nicht.
+  const plan = startablauf.startPlan(process.env, Boolean(process.stdout.isTTY && process.stdin.isTTY));
+  if (plan.anim) await glut.play({ duration: 10000 });
+  else await spark.ignite({ label: "Ember zündet" });
   try {
     // data/sl.pin ist die Quelle des SL-Schluessels. Eine neue PIN gilt nach dem
     // Neustart; ein alter cmd-Rest als Schluessel wird verworfen.
@@ -1822,12 +1850,14 @@ server.listen(PORT, HOST, async () => {
   console.log("");
   console.log("  Spielleiter   http://127.0.0.1:" + PORT + "/ember");
   console.log("  Spieler       http://127.0.0.1:" + PORT + "/player");
+  console.log("  Zu Hause      " + (startablauf.tunnelLive(DATA) ? remoteUrl() + "/player" : "Cloud OFF, die Adresse steht in der Leitstelle, sobald der Tunnel da ist"));
   console.log("");
+  // Titel: nur Cloud ON/OFF. tools/tunnel.js haelt data/public-url.txt nur, solange der Tunnel steht.
   const paintTitle = () => {
-    const remote = remoteUrl();
-    process.title = "DYE.TV  Spielleiter http://127.0.0.1:" + PORT + "/ember" + (remote ? "  |  Spieler " + remote + "/player" : "  |  Spieler http://127.0.0.1:" + PORT + "/player");
+    process.title = startablauf.cloudTitle(startablauf.tunnelLive(DATA));
   };
   paintTitle();
+  if (plan.browser) openBrowserOnce("http://127.0.0.1:" + PORT + "/");
   let seen = remoteUrl();
   setInterval(() => {
     paintTitle();

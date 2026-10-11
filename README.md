@@ -9,7 +9,7 @@ ist der Server, die Daten liegen in `data/ember.json`.
 
 - Windows 10 oder 11 für die `.bat`, sonst `npm start`
 - [Node.js](https://nodejs.org) (LTS, getestet mit Node 20 und 24) von der Seite, nicht aus einer zufälligen Quelle
-- Ein Browser (Brave, Chrome, Edge …); `http://127.0.0.1:3478/` selbst öffnen
+- Ein Browser (Brave, Chrome, Edge …); `start.bat` öffnet `http://127.0.0.1:3478/` im Standardbrowser
 - Für Spieler zu Hause zusätzlich [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
 - Keine `npm install`-Schritte nötig — das Projekt hat **null Abhängigkeiten**
 
@@ -21,9 +21,9 @@ Lies das, bevor du eine `.bat` doppelklickst. Eine Batch-Datei ist ein Skript, s
 
 1. `start.bat` im Editor öffnen und lesen.
 2. Doppelklick. Beim ersten Start fragt das Fenster nach der Spielleiter-PIN.
-3. Im Browser `http://127.0.0.1:3478/` öffnen. Das ist der Technik-Tisch.
+3. Die Glut-Animation läuft rund 10 Sekunden (jede Taste überspringt sie), danach öffnet sich `http://127.0.0.1:3478/` im Standardbrowser. Das ist der Technik-Tisch.
 4. Ember ist die Glut. Spieler im selben WLAN nehmen die Adresse aus der Leiste.
-5. Zu Hause: das Fenster von `start.bat` offen lassen. Sobald der Tunnel steht, zeigt die Titelleiste die Adresse mit `/player`. Die an die Spieler schicken.
+5. Zu Hause: das Fenster von `start.bat` offen lassen. Sobald der Tunnel steht, springt der Fenstertitel von `DYE.TV - Cloud OFF` auf `DYE.TV - Cloud ON`. Die Adresse mit `/player` steht dann in der Leitstelle. Die an die Spieler schicken.
 
 ### Spielleiter-PIN
 
@@ -33,7 +33,7 @@ PIN später ändern: `data\sl.pin` löschen und `start.bat` neu starten.
 
 ### Ember.bat gibt es nicht mehr
 
-`Ember.bat` hat `start.bat` nur minimiert gestartet und Edge geöffnet. Minimiert sieht man die PIN-Frage beim ersten Start nicht, und der Browser der Wahl ist Brave. Deshalb: immer `start.bat`, Browser selbst öffnen. QuickEdit im Konsolenfenster ausschalten (Fenster → Eigenschaften), sonst hält ein Klick ins Fenster den Server an.
+`Ember.bat` hat `start.bat` nur minimiert gestartet und Edge geöffnet. Minimiert sieht man die PIN-Frage beim ersten Start nicht, und der Browser der Wahl ist Brave. Deshalb: immer `start.bat`. Den Browser öffnet sie selbst. QuickEdit im Konsolenfenster ausschalten (Fenster → Eigenschaften), sonst hält ein Klick ins Fenster den Server an.
 
 Daten liegen in `data/`. Die ist nicht im Repo. Ein Update zieht nur den Code.
 
@@ -42,7 +42,7 @@ Daten liegen in `data/`. Die ist nicht im Repo. Ein Update zieht nur den Code.
 
 | Datei        | Was sie tut                                                        |
 | ------------ | ------------------------------------------------------------------ |
-| `start.bat`  | Prüft Node, fragt beim ersten Mal die SL-PIN, startet Server und Tunnel, Neustart-Schleife |
+| `start.bat`  | Prüft Node, fragt beim ersten Mal die SL-PIN, startet Server und Tunnel, Glut-Animation, öffnet den Browser, Neustart-Schleife |
 
 Tests laufen auch unter Windows mit `npm test`.
 
@@ -55,7 +55,9 @@ npm test         # Alle Tests
 
 Umgebungsvariablen: `EMBER_PORT` (Standard `3478`), `EMBER_HOST` (Standard `0.0.0.0`).
 
-Die Adressen stehen im Fenster und in der Titelleiste. Cloudflare-Pings gehen nach `data/tunnel.log` und schieben sie nicht mehr weg. Die Spielleitung ist `http://127.0.0.1:3478/ember`, nicht die Tunnel-Adresse.
+Die Adressen stehen im Fenster. Der Fenstertitel zeigt nur `DYE.TV - Cloud OFF` oder `DYE.TV - Cloud ON`. ON gilt, solange der Tunnel steht. Bricht er weg (kein Internet), springt der Titel zurück auf OFF. Offline läuft alles am Tisch weiter, der Browser geht trotzdem auf.
+
+Beim Start aus `start.bat` laufen Server und Glut-Animation parallel. Nach der Animation öffnet sich `http://127.0.0.1:<EMBER_PORT>/` einmal im Standardbrowser, bei Neustarts aus der App nicht noch einmal. Abschalten mit `set DYE_NO_ANIM=1` (keine Animation) oder `set DYE_NO_BROWSER=1` (kein Browser) vor `start.bat`. `npm start` zeigt beides nicht. Cloudflare-Pings gehen nach `data/tunnel.log` und schieben sie nicht mehr weg. Die Spielleitung ist `http://127.0.0.1:3478/ember`, nicht die Tunnel-Adresse.
 
 ## Die Seiten
 
