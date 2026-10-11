@@ -64,6 +64,7 @@ html, body { height: 100%; }
   font-size: 0.85rem;
 }
 .pill.on { border-color: var(--blue); color: #d7e1ec; }
+.pill.gate { border-color: #fcbd36; color: #ffe3a3; }
 
 /* Kacheln links, Einstellungen rechts: etwa 60/40. */
 .desk-main {

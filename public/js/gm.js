@@ -56,10 +56,12 @@ function pips(count, marked, kind, onClick) {
 
 function renderLan() {
   const urls = (state.lan?.addresses || []).map((a) => `http://${a.address}:${state.lan.port}/player`);
-  const remote = state.lan?.remote ? `${state.lan.remote}/player` : "";
-  $("#lanChip").textContent = remote ? `Zu Hause: ${remote}` : urls[0] ? `Tisch: ${urls[0]}` : "Kein Netzwerk gefunden";
+  // DEBUG_Run-Tor zu: Tunnel-Adresse noch nicht an Spieler geben.
+  const gate = state.lan?.online === false ? state.lan.gate || "Offline – erst DEBUG_Run" : "";
+  const remote = !gate && state.lan?.remote ? `${state.lan.remote}/player` : "";
+  $("#lanChip").textContent = remote ? `Zu Hause: ${remote}` : urls[0] ? `Tisch: ${urls[0]}${gate ? ` · ${gate}` : ""}` : gate || "Kein Netzwerk gefunden";
   const box = $("#tunnelUrl");
-  if (box) box.textContent = remote || (urls[0] ? "Tunnel wartet. Am Tisch: " + urls[0] : "Tunnel wartet. start.bat offen lassen.");
+  if (box) box.textContent = remote || (gate ? `${gate}. Am Tisch: ${urls[0] || "–"}` : urls[0] ? "Tunnel wartet. Am Tisch: " + urls[0] : "Tunnel wartet. start.bat offen lassen.");
 }
 
 function renderHud() {

@@ -26,7 +26,8 @@ Leitstelle.register({
     if (!this.rows || !s) return;
     for (const [key, row] of Object.entries(this.rows)) {
       const url = s.urls[key] || "";
-      row.text.textContent = url || (key === "tunnel" ? "Tunnel aus" : "–");
+      const offline = key === "tunnel" && s.debugRun && s.debugRun.open === false;
+      row.text.textContent = url || (offline ? s.debugRun.text || "Offline – erst DEBUG_Run" : key === "tunnel" ? "Tunnel aus" : "–");
       row.text.title = url;
       row.btn.disabled = !url;
     }

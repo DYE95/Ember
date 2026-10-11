@@ -40,6 +40,6 @@ test("Stile vorhanden, Cache-Versionen hochgezählt", () => {
   for (const sel of [".tl-alert", ".tl-upload.alert", "#legionCard.tl-flash", "#legionCard.tl-missing"]) {
     assert.ok(css.includes(sel), sel);
   }
-  assert.match(html, /testlauf\.css\?v=4/);
+  assert.match(html, /testlauf\.css\?v=([4-9]|\d\d+)"/); // mindestens 4
   assert.match(html, /testlauf\.js\?v=([4-9]|\d\d+)"/); // mindestens 4
 });

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Testlauf · DYE.TV</title>
+  <title>DEBUG_Run · DYE.TV</title>
   <link rel="icon" href="/img/ember-icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/css/testlauf.css?v=4" />
+  <link rel="stylesheet" href="/css/testlauf.css?v=5" />
 </head>
 <body class="tl-body">
   <header class="tl-top">
     <a class="tl-btn tl-back" href="/">← Startseite</a>
-    <h1>Testlauf</h1>
+    <h1>DEBUG_Run</h1>
     <div class="tl-progress" aria-live="polite">
       <div class="tl-bar"><span id="bar"></span></div>
       <strong id="progressText">…</strong>
@@ -30,6 +30,12 @@
     </section>
 
     <aside class="tl-col tl-side" aria-label="Bericht">
+      <section class="tl-card tl-gate" id="gateCard" aria-live="polite">
+        <h2>Online für Spieler</h2>
+        <p id="gateText">…</p>
+        <p class="tl-hint">Über den Tunnel kommen Spieler erst an den Tisch, wenn der DEBUG_Run von heute abgelegt und mit „Hochladen &amp; Legion Bescheid geben“ hochgeladen ist. Der Tag wechselt um 6 Uhr. WLAN und dieser Rechner gehen immer.</p>
+        <button class="tl-btn tl-escape" id="btnEscape" type="button" hidden>Ohne DEBUG_Run online gehen</button>
+      </section>
       <section class="tl-card">
         <h2>Wer testet womit</h2>
         <label class="tl-field">Tester <input id="tester" placeholder="z. B. Dave" autocomplete="off" /></label>
@@ -66,7 +72,7 @@
           <div class="tl-row">
             <button class="tl-btn tl-primary" id="btnUploadResult" type="button">Hochladen &amp; Legion Bescheid geben</button>
             <button class="tl-btn" id="btnViewResult" type="button">Bericht ansehen</button>
-            <button class="tl-btn" id="btnNew" type="button">Neuer Testlauf</button>
+            <button class="tl-btn" id="btnNew" type="button">Neuer DEBUG_Run</button>
           </div>
         </div>
         <div id="uploadResult" class="tl-upload" hidden aria-live="polite"></div>
@@ -75,7 +81,7 @@
       </section>
 
       <section class="tl-card">
-        <h2>Frühere Testläufe</h2>
+        <h2>Frühere DEBUG_Runs</h2>
         <ol class="tl-runs" id="runs"></ol>
       </section>
 
@@ -110,6 +116,6 @@
     </div>
   </div>
 
-  <script src="/js/testlauf.js?v=6"></script>
+  <script src="/js/testlauf.js?v=7"></script>
 </body>
 </html>

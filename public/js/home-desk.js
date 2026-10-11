@@ -11,7 +11,7 @@ const BUILTIN = [
   { id: "karten", title: "Karten", sub: "Print and Play", href: "/karten" },
   { id: "solo", title: "Solo", sub: "Dungeon-Lauf allein", href: "/solo" },
   { id: "heft", title: "Heft", sub: "Notizen · Markdown", href: "/heft" },
-  { id: "testlauf", title: "Testlauf", sub: "Checkliste · Bilder · Bericht", href: "/testlauf" },
+  { id: "testlauf", title: "DEBUG_Run", sub: "Checkliste · vor dem Online-Gang", href: "/debug-run" },
   { id: "ereignisse", title: "Ereignisse", sub: "Parcours, Fallwerk, Puls …", href: "/ereignisse" },
   { id: "settings", title: "Einstellungen", sub: "Leitstelle ⇄ Einstellungen", toggle: true },
 ];
@@ -526,15 +526,18 @@ const tick = () => {
 tick();
 setInterval(tick, 10000);
 
+// DEBUG_Run-Tor zu (lan.online === false): Tunnel-Adresse gilt fuer Spieler noch nicht.
 function renderStatus(s) {
   const lan = s.lan || {};
-  const remote = lan.remote || "";
+  const offline = lan.online === false;
+  const remote = offline ? "" : lan.remote || "";
   const first = (lan.addresses || [])[0];
   const url = remote ? `${remote}/player` : first ? `http://${first.address}:${lan.port}/player` : "";
   document.getElementById("playerUrl").textContent = url || "Keine Spieler-Adresse";
   const tunnel = document.getElementById("tunnelState");
-  tunnel.textContent = remote ? "Tunnel an" : "Tunnel aus";
+  tunnel.textContent = offline ? lan.gate || "Offline – erst DEBUG_Run" : remote ? "Tunnel an" : "Tunnel aus";
   tunnel.classList.toggle("on", Boolean(remote));
+  tunnel.classList.toggle("gate", offline);
   renderCount(s.presence || []);
 }
 
@@ -557,6 +560,14 @@ function serverState(ok) {
 window.addEventListener("ember:leitstelle", (ev) => {
   const s = ev.detail && ev.detail.state;
   restartNeeded = Boolean(s && !ev.detail.offline && s.code && s.code.restartNeeded);
+  if (s && !ev.detail.offline && s.debugRun && current && current.lan) {
+    const open = s.debugRun.open !== false;
+    if (current.lan.online !== open) {
+      current.lan.online = open;
+      current.lan.gate = open ? "" : s.debugRun.text;
+      renderStatus(current);
+    }
+  }
   serverState(!ev.detail.offline || serverOk);
 });
 document.getElementById("btnRestartNow").addEventListener("click", (ev) => {

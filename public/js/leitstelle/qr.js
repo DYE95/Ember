@@ -20,6 +20,6 @@ Leitstelle.register({
       return;
     }
     this.art.innerHTML = window.EmberQR.toSvg(window.EmberQR.encode(url), { dark: "#10151c", light: "#eef2f8", label: `QR-Code ${url}` });
-    this.label.textContent = s.tunnel.up ? "Spieler über den Tunnel" : "Spieler im WLAN";
+    this.label.textContent = s.tunnel.open ? "Spieler über den Tunnel" : "Spieler im WLAN";
   },
 });

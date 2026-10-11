@@ -14,18 +14,20 @@ Leitstelle.register({
       return;
     }
     const v = ctx.version;
+    const gate = s.debugRun || { open: true };
+    const gateOpen = gate.open !== false;
     const crash = s.crash;
     const recentCrash = crash && Date.now() - Date.parse(crash.at) < 24 * 3600 * 1000;
     const rows = [
       ["ok", "Server", `läuft seit ${ctx.duration(s.server.uptimeSec)} · Port ${s.server.port} · ${s.server.memoryMb} MB`],
       ["", "Version", v ? `${v.version}${v.source === "changelog" ? " (CHANGELOG)" : ""}` : "…"],
-      [s.tunnel.up ? "ok" : "warn", "Tunnel", s.tunnel.up ? `an · Adresse ${ctx.ago(s.tunnel.since)}` : "aus · start.bat starten"],
+      [s.tunnel.up && gateOpen ? "ok" : "warn", "Tunnel", !gateOpen ? `${gate.text || "Offline – erst DEBUG_Run"}${s.tunnel.up ? " · Tunnel steht, Spieler warten" : ""}` : s.tunnel.up ? `an · Adresse ${ctx.ago(s.tunnel.since)}${gate.via === "notausgang" ? " · ohne DEBUG_Run" : ""}` : "aus · start.bat starten"],
       [s.people.gm ? "ok" : "", "Am Tisch", `${s.people.players} Spieler${s.people.names.length ? ` (${s.people.names.join(", ")})` : ""} · ${s.people.gm ? "SL da" : "kein SL"}`],
       ["", "Daten", `${ctx.bytes(s.data.size)} · gespeichert ${ctx.clock(s.data.savedAt)} · Sicherung ${s.data.backupAt ? ctx.clock(s.data.backupAt) : "keine"}`],
       [recentCrash ? "bad" : "ok", "Absturz", crash ? `${ctx.clock(crash.at)} · ${crash.kind}${crash.message ? ` · ${crash.message}` : ""}` : "keiner"],
-      ["", "Testlauf", (() => {
+      ["", "DEBUG_Run", (() => {
         const t = s.testlauf;
-        if (!t) return "noch keiner · Kachel Testlauf";
+        if (!t) return "noch keiner · Kachel DEBUG_Run";
         const when = t.at ? ctx.clock(t.at) : t.name;
         return `${when} · ${t.done || 0}/${t.total || 0}${t.fehler ? ` · X ${t.fehler}` : ""}`;
       })()],
@@ -46,6 +48,34 @@ Leitstelle.register({
       nodes.unshift(
         ctx.el("dt", { class: "lantern" }, ctx.el("i", { class: "ls-dot" }), "Neustart"),
         ctx.el("dd", { class: "ls-restart-row", title: files }, ctx.el("span", { text: `nötig – neuer Code geladen${head}` }), btn),
+      );
+    }
+    // DEBUG_Run-Tor zu: Notausgang fuer den SL, mit zweitem Klick.
+    if (!gateOpen) {
+      const btn = ctx.el("button", { class: "ls-btn ls-notausgang", type: "button" }, this.armed ? "Wirklich? Nochmal klicken" : "Ohne DEBUG_Run online gehen");
+      btn.addEventListener("click", async () => {
+        if (!this.armed) {
+          this.armed = true;
+          btn.textContent = "Wirklich? Nochmal klicken";
+          clearTimeout(this.armTimer);
+          this.armTimer = setTimeout(() => { this.armed = false; btn.textContent = "Ohne DEBUG_Run online gehen"; }, 6000);
+          return;
+        }
+        clearTimeout(this.armTimer);
+        this.armed = false;
+        btn.disabled = true;
+        btn.textContent = "Geht online …";
+        try {
+          const res = await fetch("/api/debug-run/notausgang", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          if (!res.ok) throw new Error(String(res.status));
+        } catch {
+          btn.textContent = "Ging nicht";
+        }
+        if (window.Leitstelle) window.Leitstelle.refresh();
+      });
+      nodes.unshift(
+        ctx.el("dt", { class: "lantern" }, ctx.el("i", { class: "ls-dot" }), "Online"),
+        ctx.el("dd", { class: "ls-restart-row" }, ctx.el("span", { text: gate.text || "Offline – erst DEBUG_Run" }), ctx.el("a", { class: "ls-btn", href: "/debug-run" }, "Zum DEBUG_Run"), btn),
       );
     }
     this.list.replaceChildren(...nodes);
