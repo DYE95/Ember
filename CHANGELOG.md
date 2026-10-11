@@ -5,6 +5,7 @@ kein git da ist (z. B. bei einem ZIP-Download).
 
 ## Unveröffentlicht
 - Fix Testlauf 10.10.: Ping länger und größer sichtbar (Empfangszeit statt Serveruhr), Sitz nach Entsperren bleibt, Boden meldet Fehler, SL-PIN und Browser-Schlüssel bleiben synchron, Frage-Feld verschiebt die Karte nicht mehr
+- Politur: kaputte Adressen und JSON-Körper geben 400 statt Serverfehler, Namen mit „<“ zerlegen Karte, Bögen und Listen nicht mehr
 - Feinschliff: Legion-Verbindung nimmt eingefügte Zeilen wie „Authorization: Bearer …“ an; Spieler am Handy: Live-Verbindung kommt nach Bildschirmsperre und Tunnel-Aussetzern selbst zurück, Karte verdeckt hochkant keine Knöpfe mehr, kein Doppelwurf bei langsamem Netz
 - „Neustart nötig – neuer Code geladen“: Leitstelle und Fußzeile merken git pull bei laufendem Server, Neustart mit einem Klick
 - Testlauf hochladen: Knopf „Hochladen & Legion Bescheid geben“ schiebt den Lauf auf den Zweig testlaeufe und meldet ihn per Webhook

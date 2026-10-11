@@ -109,7 +109,7 @@ function renderCampaigns() {
   (state.campaigns || []).forEach((c) => {
     const b = document.createElement("button");
     b.className = `card${c.id === selectedCampaignId ? " active" : ""}`;
-    b.innerHTML = `<div class="name">${c.name}</div><div class="meta">${c.frame || "kein Frame"} · Fear ${c.gmFear}/${c.fearMax}</div>`;
+    b.innerHTML = `<div class="name">${esc(c.name)}</div><div class="meta">${esc(c.frame || "kein Frame")} · Fear ${c.gmFear}/${c.fearMax}</div>`;
     b.addEventListener("click", () => { selectedCampaignId = c.id; fillCampaignForm(c); renderCampaigns(); });
     list.appendChild(b);
   });
@@ -141,7 +141,7 @@ function renderCharacters() {
   charsOf(activeCampaignId()).forEach((c) => {
     const b = document.createElement("button");
     b.className = `card${c.id === selectedCharacterId ? " active" : ""}`;
-    b.innerHTML = `<div class="name">${c.name}</div><div class="meta">${c.class || "—"} · PIN ${c.playerPin}</div>`;
+    b.innerHTML = `<div class="name">${esc(c.name)}</div><div class="meta">${esc(c.class || "—")} · PIN ${esc(c.playerPin)}</div>`;
     b.addEventListener("click", () => { selectedCharacterId = c.id; fillCharacterForm(c); renderCharacters(); renderCharacterSheet(); });
     const tab = document.createElement("a");
     tab.className = "btn tiny";
@@ -216,7 +216,7 @@ function renderEncounter() {
     (ses?.encounters || []).forEach((e) => {
       const b = document.createElement("button");
       b.className = "card" + (enc && e.id === enc.id ? " active" : "");
-      b.innerHTML = `<div class="name">${e.name}</div><div class="meta">${e.status} · Snares ${(e.traps||[]).length} · Thresholds ${(e.zones||[]).length}</div>`;
+      b.innerHTML = `<div class="name">${esc(e.name)}</div><div class="meta">${esc(e.status)} · Snares ${(e.traps||[]).length} · Thresholds ${(e.zones||[]).length}</div>`;
       b.addEventListener("click", () => api("/api/session/encounter/select", { as: "gm", id: e.id }));
       list.appendChild(b);
     });
@@ -276,14 +276,14 @@ function renderSession() {
   if (loaded) loaded.textContent = camp ? camp.name : "nichts geladen";
   const pick = $("#campaignPick");
   if (pick && document.activeElement !== pick) {
-    pick.innerHTML = `<option value="">—</option>` + (state.campaigns || []).map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+    pick.innerHTML = `<option value="">—</option>` + (state.campaigns || []).map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
     pick.value = activeCampaignId() || "";
   }
   const readyList = $("#readyList");
   const seated = charsOf(activeCampaignId()).filter((c) => Number.isInteger(c.tableSeat) || (state.presence || []).some((p) => p.characterId === c.id && p.status !== "offline"));
   const ready = ses?.ready || {};
   if (readyList) {
-    readyList.innerHTML = "<p class='hint'>Wer ist on</p><p class='hint'>Bereit für die Geschichte</p>" + (seated.map((c) => `<div class="card seat-claim" data-id="${c.id}"><div class="name">${c.name}</div><div class="meta">${ready[c.id] ? "bereit" : "wartet"}</div></div>`).join("") || "<p class='hint'>Noch niemand sitzt.</p>");
+    readyList.innerHTML = "<p class='hint'>Wer ist on</p><p class='hint'>Bereit für die Geschichte</p>" + (seated.map((c) => `<div class="card seat-claim" data-id="${esc(c.id)}"><div class="name">${esc(c.name)}</div><div class="meta">${ready[c.id] ? "bereit" : "wartet"}</div></div>`).join("") || "<p class='hint'>Noch niemand sitzt.</p>");
     readyList.querySelectorAll(".seat-claim").forEach((card) => card.addEventListener("click", () => claimSeat(card.dataset.id, card.querySelector(".name").textContent)));
   }
   const enter = $("#btnEnter");
@@ -320,7 +320,7 @@ function renderSession() {
       const code = spot ? "spotlight" : queued ? "queued" : (seat?.status || "");
       const el = document.createElement("div");
       el.className = "card";
-      el.innerHTML = `<div class="name">${c.name}</div><div class="status"><span class="dot ${code}"></span>${statusLabel(code)}</div>`;
+      el.innerHTML = `<div class="name">${esc(c.name)}</div><div class="status"><span class="dot ${code}"></span>${statusLabel(code)}</div>`;
       const tab = document.createElement("a");
       tab.className = "btn tiny";
       tab.href = "/player?as=" + encodeURIComponent(c.id) + "&tab=1";
@@ -337,7 +337,7 @@ function renderSession() {
   if (harmFoe) {
     const current = harmFoe.value;
     const foes = (ses?.map?.tokens || []).filter((t) => t.kind === "foe");
-    harmFoe.innerHTML = `<option value="">Foe wählen</option>` + foes.map((t) => `<option value="${t.id}">${t.label}${t.stressMax ? " " + (t.stress || 0) + "/" + t.stressMax : ""}</option>`).join("");
+    harmFoe.innerHTML = `<option value="">Foe wählen</option>` + foes.map((t) => `<option value="${esc(t.id)}">${esc(t.label)}${t.stressMax ? " " + (t.stress || 0) + "/" + t.stressMax : ""}</option>`).join("");
     if (current) harmFoe.value = current;
   }
   const log = $("#sessionLog");
@@ -381,7 +381,7 @@ function renderSession() {
   const sel = $("#rollCharacter");
   if (sel) {
     const current = sel.value;
-    sel.innerHTML = charsOf(activeCampaignId()).map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+    sel.innerHTML = charsOf(activeCampaignId()).map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
     if (current) sel.value = current;
     fillExperiences();
   }
@@ -409,7 +409,7 @@ function fillExperiences() {
   const pc = (state.characters || []).find((c) => c.id === $("#rollCharacter")?.value);
   const box = $("#rollExperience");
   if (!box) return;
-  box.innerHTML = `<option value="">—</option>` + (pc?.experiences || []).map((e) => `<option value="${e.id}">${e.name} +${e.bonus}</option>`).join("");
+  box.innerHTML = `<option value="">—</option>` + (pc?.experiences || []).map((e) => `<option value="${esc(e.id)}">${esc(e.name)} +${esc(e.bonus)}</option>`).join("");
 }
 
 function parseExperiences(text) {
@@ -471,7 +471,7 @@ async function renderChats() {
   const box = $("#chatList");
   if (!box) return;
   const rows = await fetch("/api/chats").then((r) => r.json()).catch(() => []);
-  box.innerHTML = rows.map((c) => `<div class="card"><div class="name">${c.title}</div><div class="meta">${c.text}</div></div>`).join("") || "<p class='hint'>Noch keine Fäden.</p>";
+  box.innerHTML = rows.map((c) => `<div class="card"><div class="name">${esc(c.title)}</div><div class="meta">${esc(c.text)}</div></div>`).join("") || "<p class='hint'>Noch keine Fäden.</p>";
 }
 function render() {
   try {
@@ -761,7 +761,7 @@ async function fillSubclass(form, className, current) {
   if (!sel || sel.tagName !== "SELECT") return;
   const res = await fetch("/api/solo/subclasses?class=" + encodeURIComponent(className || ""));
   const data = await res.json();
-  sel.innerHTML = `<option value="">—</option>` + (data.subclasses || []).map((n) => `<option value="${n.name || n}">${n.name || n}${n.feature ? " — " + n.feature : ""}</option>`).join("");
+  sel.innerHTML = `<option value="">—</option>` + (data.subclasses || []).map((n) => `<option value="${esc(n.name || n)}">${esc(n.name || n)}${n.feature ? " — " + esc(n.feature) : ""}</option>`).join("");
   if (current) sel.value = current;
 }
 document.querySelector("#characterForm [name=class]")?.addEventListener("change", (ev) => fillSubclass(ev.target.form, ev.target.value, ""));

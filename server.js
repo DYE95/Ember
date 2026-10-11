@@ -232,16 +232,23 @@ function readBody(req, limit = MAX_JSON_BODY) {
   });
 }
 
+// Nur ein JSON-Objekt ist ein gueltiger Koerper. "null", Zahlen oder Listen
+// haetten die Routen sonst mit einem TypeError (500) umgeworfen.
 async function readJson(req) {
   const raw = await readBody(req);
   if (!raw.length) return {};
+  let body;
   try {
-    return JSON.parse(raw.toString("utf8"));
+    body = JSON.parse(raw.toString("utf8"));
   } catch {
+    body = undefined;
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
     const err = new Error("Kaputtes JSON.");
     err.badJson = true;
     throw err;
   }
+  return body;
 }
 
 function safeJoin(root, rel) {
@@ -1675,7 +1682,16 @@ s.textContent="Server kommt nicht wieder. Läuft start.bat?"};</script></body></
 
 const server = http.createServer(async (req, res) => {
   try {
-    const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    // Fester Ursprung: ein kaputter Host-Header oder "//" am Anfang
+    // ("Invalid URL") gab sonst 500. Gebraucht wird nur Pfad und Query.
+    let url;
+    try {
+      url = new URL(String(req.url || "/").replace(/^\/{2,}/, "/"), "http://localhost");
+    } catch {
+      req.resume();
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+      return res.end("Ungültige Adresse.");
+    }
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("Referrer-Policy", "same-origin");
@@ -1728,8 +1744,9 @@ const server = http.createServer(async (req, res) => {
       return serveFile(res, path.join(PUBLIC, "karten.html"), req);
     }
 if (url.pathname.startsWith("/docs/bibliothek/")) {
-      const rel = decodeURIComponent(url.pathname.slice("/docs/bibliothek/".length));
-      const file = safeJoin(LIBRARY, rel);
+      // Kaputtes %-Zeichen ("URI malformed") wie bei den Regeln: 403 statt 500.
+      let file = null;
+      try { file = safeJoin(LIBRARY, decodeURIComponent(url.pathname.slice("/docs/bibliothek/".length))); } catch { file = null; }
       if (!file) { res.writeHead(403); return res.end(); }
       return serveFile(res, file, req);
     }
@@ -1770,6 +1787,9 @@ if (url.pathname.startsWith("/docs/bibliothek/")) {
     if (isLocalRequest(req) && newerPageHint(res, rel, file)) return;
     return serveFile(res, file, req);
   } catch (err) {
+    // Antwort schon unterwegs (z. B. Datei-Stream): nur noch abbrechen,
+    // ein zweites writeHead wuerfe ERR_HTTP_HEADERS_SENT.
+    if (res.headersSent) { res.destroy(); return; }
     if (err && err.badJson) return send(res, 400, { error: err.message });
     if (err && err.tooLarge) {
       res.setHeader("Connection", "close");

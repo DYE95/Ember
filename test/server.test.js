@@ -181,3 +181,36 @@ test("Update fragt nie nach einem Passwort und hat eine Frist", () => {
   assert.ok(/GIT_TERMINAL_PROMPT: "0"/.test(src));
   assert.ok(/timeout: 60000/.test(src));
 });
+
+// Politur: kaputte Anfragen geben 4xx statt 500.
+test("Kaputte Adresse, Host und Prozent-Zeichen: kein 500", async () => {
+  const slash = await request("GET", "//");
+  assert.notEqual(slash.status, 500, slash.text);
+  assert.equal((await request("GET", "//player")).status, 200);
+  const host = await request("GET", "/api/state", { headers: { Host: "a b" } });
+  assert.equal(host.status, 200, host.text);
+  assert.equal((await request("GET", "/docs/bibliothek/%ZZ")).status, 403);
+  assert.equal((await request("GET", "/docs/regeln/%ZZ")).status, 403);
+});
+
+test("JSON-Körper muss ein Objekt sein: null, Liste, Zahl geben 400", async () => {
+  const same = { "Sec-Fetch-Site": "same-origin", "Content-Type": "application/json" };
+  for (const body of ["null", "[1]", "5", "\"x\""]) {
+    for (const url of ["/api/roll", "/api/presence", "/api/settings", "/api/maps"]) {
+      const res = await request("POST", url, { headers: same, body });
+      assert.equal(res.status, 400, `${url} ${body}: ${res.text}`);
+      assert.equal(res.json.error, "Kaputtes JSON.");
+    }
+  }
+});
+
+test("Namen aus dem Spielstand gehen escaped ins HTML", () => {
+  const read = (f) => fs.readFileSync(path.join(__dirname, "..", "public", "js", f), "utf8");
+  const raw = /innerHTML = .*\$\{(c|e|t|h)\.(name|label|title|text)\}/;
+  for (const f of ["gm.js", "player.js", "map.js", "solo.js"]) {
+    const bad = read(f).split("\n").filter((line) => raw.test(line));
+    assert.deepEqual(bad, [], f);
+  }
+  assert.match(read("map.js"), /function mapEsc\(/);
+  assert.match(read("solo.js"), /function esc\(/);
+});

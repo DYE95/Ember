@@ -1,4 +1,6 @@
 const $ = (s) => document.querySelector(s);
+// Namen aus Boegen und Katalog nie roh ins HTML.
+function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 let state = {};
 let pins = [];
 
@@ -30,7 +32,7 @@ async function refresh() {
   const pcs = state.characters || [];
   const sel = $("#pc");
   const current = sel.value;
-  sel.innerHTML = pcs.map((c) => `<option value="${c.id}">${c.name} · Lv ${c.level || 1}</option>`).join("") || "<option value=''>Kein Bogen</option>";
+  sel.innerHTML = pcs.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} · Lv ${esc(c.level || 1)}</option>`).join("") || "<option value=''>Kein Bogen</option>";
   if (current) sel.value = current;
   const pc = pcs.find((c) => c.id === sel.value);
   $("#who").textContent = pc ? pc.name + (pc.subclass ? " · " + pc.subclass : "") : "kein Bogen";
@@ -111,7 +113,7 @@ $("#grid").addEventListener("pointerdown", (ev) => {
 
 function fillSubs(pc) {
   const names = window.emberSubs || [];
-  const options = names.map((n) => `<option value="${n.name || n}">${n.name || n}${n.feature ? " — " + n.feature : ""}</option>`).join("");
+  const options = names.map((n) => `<option value="${esc(n.name || n)}">${esc(n.name || n)}${n.feature ? " — " + esc(n.feature) : ""}</option>`).join("");
   const current = pc?.subclass || "";
   for (const id of ["subPick", "levelSub"]) {
     const sel = $("#" + id);
@@ -134,7 +136,7 @@ $("#btnLevel").addEventListener("click", () => {
   const next = Math.min(10, Number(pc.level || 1) + 1);
   const prof = [2, 5, 8].includes(next) ? " Proficiency +1." : "";
   $("#levelPreview").textContent = pc.name + " wird Level " + next + "." + prof;
-  $("#levelUpgrade").innerHTML = `<option value="">—</option>` + (pc.experiences || []).map((e) => `<option value="${e.id || e.name}">${e.name} +${e.bonus}</option>`).join("");
+  $("#levelUpgrade").innerHTML = `<option value="">—</option>` + (pc.experiences || []).map((e) => `<option value="${esc(e.id || e.name)}">${esc(e.name)} +${esc(e.bonus)}</option>`).join("");
   box.classList.toggle("hidden");
 });
 $("#btnLevelGo").addEventListener("click", () => run(async () => {
