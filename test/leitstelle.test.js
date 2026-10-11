@@ -18,10 +18,25 @@ test("CHANGELOG.md wird gelesen", () => {
 });
 
 test("ohne git: Version und Notizen aus CHANGELOG.md", () => {
-  const v = ls.version({ noGit: true, fresh: true });
-  assert.equal(v.source, "changelog");
-  assert.equal(v.version, "2026-10-10");
-  assert.ok(v.notes.some((n) => /Solo-Spiel/.test(n.subject)));
+  // Fixture statt echter Datei: neue Einträge im echten CHANGELOG dürfen den Test nicht brechen.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ember-cl-"));
+  try {
+    const neu = Array.from({ length: 12 }, (_, i) => `- Neu ${12 - i}`).join("\n");
+    fs.writeFileSync(path.join(dir, "CHANGELOG.md"), `# Änderungen\n\n## Unveröffentlicht\n${neu}\n\n## 2026-10-10\n- Solo-Spiel (#27)\n\n## 2026-10-01\n- Alt\n`);
+    const v = ls.version({ noGit: true, fresh: true, root: dir });
+    assert.equal(v.source, "changelog");
+    assert.equal(v.version, "2026-10-10");
+    assert.equal(v.notes.length, 10);
+    assert.equal(v.notes[0].subject, "Neu 12");
+    assert.equal(v.notes[0].section, "Unveröffentlicht");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  // Echte Datei: der neueste Eintrag steht vorne.
+  const real = ls.version({ noGit: true, fresh: true });
+  const first = ls.parseChangelog(fs.readFileSync(path.join(__dirname, "..", "CHANGELOG.md"), "utf8"))[0];
+  assert.equal(real.source, "changelog");
+  assert.deepEqual(real.notes[0], first);
 });
 
 test("mit git: Kurz-SHA und Commit-Titel", () => {
