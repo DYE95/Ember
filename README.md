@@ -94,14 +94,33 @@ Schnittstelle antwortet nur am SL-Rechner selbst, nie über den Tunnel. Die
 Patchnotes stammen aus git oder, ohne git, aus `CHANGELOG.md`. Wie man ein
 eigenes Modul ergänzt, steht in [`docs/MODULE.md`](docs/MODULE.md).
 
-## Testlauf (`/testlauf`)
+## DEBUG_Run (`/debug-run`, alt `/testlauf`)
 
-Kachel „Testlauf“ auf der Startseite (nur SL-Rechner): Checkliste aus
+Kachel „DEBUG_Run“ auf der Startseite (nur SL-Rechner): Checkliste aus
 `docs/TESTLAUF.md` mit O/X/Eigen und Notizen, Bilder bis 50 MB, Entwurf
 mit Autosave. „Alles ablegen“ schreibt `data/testlaeufe/<Datum_Uhrzeit>/`
 mit `bericht.md`, `bericht.json` und `bilder/`. „Hochladen & Legion
 Bescheid geben“ schiebt den Lauf auf den Zweig `testlaeufe` und meldet ihn
 per Webhook, siehe [`docs/TESTLAUF-UPLOAD.md`](docs/TESTLAUF-UPLOAD.md).
+Ordner (`data/testlaeufe/`), Zweig `testlaeufe` und die alte Adresse
+`/testlauf` bleiben wie gehabt.
+
+**Erst DEBUG_Run, dann online.** Über den Cloudflare-Tunnel kommen Spieler
+erst an den Tisch, wenn der DEBUG_Run des Tages abgelegt und mit „Hochladen &
+Legion Bescheid geben“ hochgeladen ist (GitHub geschafft und, falls ein
+Webhook eingerichtet ist, Legion erreicht). Bis dahin zeigen Leitstelle und
+Fußzeile „Offline – erst DEBUG_Run“, und Tunnel-Besucher sehen „Der Tisch
+öffnet gleich – der Spielleiter macht noch seinen DEBUG_Run“ (lädt alle 20 s
+neu). WLAN und dieser Rechner laufen immer normal.
+
+- Das Tor gilt pro Spieltag nach lokaler Uhr. Der Spieltag wechselt um
+  06:00 Uhr, damit ein Abend über Mitternacht nicht mittendrin zugeht. Ein
+  Neustart des Servers ändert nichts (Stand in `data/debug-run.json`).
+- Notausgang nur am SL-Rechner: „Ohne DEBUG_Run online gehen“ in der
+  Leitstelle oder auf der DEBUG_Run-Seite (zweimal klicken). Steht mit
+  Uhrzeit in `data/debug-run.log`.
+- `set DYE_DEBUG_RUN_PFLICHT=0` vor `start.bat` schaltet das Tor ganz ab
+  (gedacht für Tests).
 
 ## Solo-Spiel (`/solo`)
 

@@ -93,6 +93,9 @@ button.ls-pill:disabled { cursor: default; }
 dt.lantern { color: #fcbd36; }
 .ls-restart-row { display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; align-items: center; color: #ffe3a3; }
 .ls-restart { border-color: #fcbd36; min-height: 2.6rem; }
+.ls-pill > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ls-notausgang { border-color: #ff7a45; min-height: 2.6rem; }
+.ls-restart-row a.ls-btn { display: inline-flex; align-items: center; min-height: 2.6rem; text-decoration: none; }
 @keyframes ls-glow { 50% { box-shadow: 0 0 0.9rem rgba(252, 189, 54, 0.45); } }
 @media (prefers-reduced-motion: reduce) { .ls-pill.lantern { animation: none; } }
 

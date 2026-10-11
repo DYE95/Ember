@@ -36,7 +36,7 @@ test.before(async () => {
   fs.writeFileSync(path.join(code, "server.js"), "// alt\n");
   fs.writeFileSync(path.join(code, "lib", "x.js"), "// alt\n");
   child = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, EMBER_DATA: path.join(dir, "data"), EMBER_PORT: String(port), EMBER_HOST: "127.0.0.1", EMBER_CODE_ROOT: code, EMBER_CODE_TTL: "0" },
+    env: { ...process.env, EMBER_DATA: path.join(dir, "data"), EMBER_PORT: String(port), EMBER_HOST: "127.0.0.1", DYE_DEBUG_RUN_PFLICHT: "0", EMBER_CODE_ROOT: code, EMBER_CODE_TTL: "0" },
     stdio: "ignore",
   });
   for (let i = 0; i < 100; i += 1) {

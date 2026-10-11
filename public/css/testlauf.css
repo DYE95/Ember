@@ -259,3 +259,10 @@ html, body { height: 100%; }
 #legionCard.tl-missing #legionState { color: var(--lantern); }
 #legionCard.tl-flash { animation: tlFlash 1.6s ease-out 1; }
 @keyframes tlFlash { 0%, 50% { box-shadow: 0 0 0 4px var(--lantern); } 100% { box-shadow: none; } }
+
+/* DEBUG_Run-Tor: offen gruen, zu laternengelb, Notausgang rot umrandet */
+.tl-gate.closed { border-color: var(--lantern); }
+.tl-gate.closed #gateText { color: #ffe3a3; }
+.tl-gate.open #gateText { color: var(--ok); }
+.tl-gate #gateText { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.tl-escape { border-color: #ff7a45; }

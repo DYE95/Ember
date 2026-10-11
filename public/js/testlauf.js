@@ -1,4 +1,4 @@
-// public/js/testlauf.js — Testlauf am SL-Rechner: Checkliste abhaken (O/X/Eigen),
+// public/js/testlauf.js — DEBUG_Run (frueher Testlauf) am SL-Rechner: Checkliste abhaken (O/X/Eigen),
 // Bilder dazulegen, am Ende alles in data/testlaeufe/ ablegen und auf Wunsch
 // nach GitHub hochladen und Legion Bescheid geben.
 // Der Entwurf liegt doppelt: sofort in localStorage, kurz danach beim Server.
@@ -443,7 +443,8 @@
       disarm();
       armed = btnId;
       btn.classList.add("confirm");
-      btn.textContent = `Wirklich? ${c.total - c.done} Punkte offen`;
+      const open = c.total - c.done;
+      btn.textContent = `Sind Sie sicher? (${open} ${open === 1 ? "offene Stelle" : "offene Stellen"})`;
       clearTimeout(armTimer);
       armTimer = setTimeout(disarm, 6000);
       return;
@@ -511,6 +512,7 @@
       if (!out.webhook.configured) $("legionMissing").hidden = true; // der Warnkasten sagt es schon
       box.innerHTML = `<p class="ok">Hochgeladen: ${link} · Commit <code>${esc(String(out.commit).slice(0, 7))}</code></p>${hook}`;
       loadRuns();
+      loadGate();
     } catch (err) {
       const b = err.body || {};
       box.className = "tl-upload bad";
@@ -647,6 +649,54 @@
   $("viewer").addEventListener("click", (ev) => { if (ev.target === $("viewer")) $("viewer").hidden = true; });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") $("viewer").hidden = true; });
 
+  // ---------- Online-Tor ----------
+  // Spieler ueber den Tunnel erst nach dem heutigen DEBUG_Run (lib/debug-run.js).
+  // Notausgang mit zweitem Klick, wird am Server geloggt.
+  let escapeArmed = false;
+  let escapeTimer = 0;
+  function clockOf(iso) {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  }
+  function showGate(g) {
+    const card = $("gateCard");
+    card.classList.toggle("open", Boolean(g.open));
+    card.classList.toggle("closed", !g.open);
+    let text;
+    if (!g.open) text = `${g.text || "Offline – erst DEBUG_Run"}. Spieler über den Tunnel sehen „Der Tisch öffnet gleich“.`;
+    else if (g.via === "notausgang") text = `Online ohne DEBUG_Run (Notausgang ${g.at ? clockOf(g.at) : ""}).`;
+    else if (g.via === "aus") text = "Online (Tor abgeschaltet).";
+    else text = `Online – DEBUG_Run ${g.run || ""} ist hochgeladen.`;
+    $("gateText").textContent = text;
+    $("btnEscape").hidden = Boolean(g.open);
+  }
+  async function loadGate() {
+    try { showGate(await api("/api/debug-run")); } catch {}
+  }
+  $("btnEscape").addEventListener("click", async () => {
+    const btn = $("btnEscape");
+    if (!escapeArmed) {
+      escapeArmed = true;
+      btn.textContent = "Wirklich ohne DEBUG_Run? Nochmal klicken";
+      clearTimeout(escapeTimer);
+      escapeTimer = setTimeout(() => { escapeArmed = false; btn.textContent = "Ohne DEBUG_Run online gehen"; }, 6000);
+      return;
+    }
+    clearTimeout(escapeTimer);
+    escapeArmed = false;
+    btn.disabled = true;
+    try {
+      showGate(await postJson("/api/debug-run/notausgang", {}));
+    } catch (err) {
+      $("gateText").textContent = `Notausgang ging nicht: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Ohne DEBUG_Run online gehen";
+    }
+  });
+  loadGate();
+  setInterval(loadGate, 30000);
+
   // ---------- Start ----------
   function readLocal() {
     try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || "null"); } catch { return null; }
@@ -683,7 +733,7 @@
     renderThumbs();
     renderRuns(data.runs || []);
     loadLegion();
-    $("saveState").textContent = pushLocal ? "Browser-Stand übernommen" : (Object.keys(draft.answers).length ? `Entwurf geladen ${clock()}` : "Neuer Testlauf");
+    $("saveState").textContent = pushLocal ? "Browser-Stand übernommen" : (Object.keys(draft.answers).length ? `Entwurf geladen ${clock()}` : "Neuer DEBUG_Run");
     if (pushLocal) saveNow();
   }
   start();

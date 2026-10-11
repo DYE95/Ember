@@ -40,7 +40,7 @@ const upload = (name, buf, headers = {}) =>
 
 test.before(async () => {
   child = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, EMBER_DATA: dir, EMBER_PORT: String(port), EMBER_HOST: "127.0.0.1" },
+    env: { ...process.env, EMBER_DATA: dir, EMBER_PORT: String(port), EMBER_HOST: "127.0.0.1", DYE_DEBUG_RUN_PFLICHT: "0" },
     stdio: "ignore",
   });
   for (let i = 0; i < 100; i += 1) {

@@ -181,3 +181,7 @@ test("Seite: Uhr-Knopf je Punkt, Gesamtzeit oben, Zeit geht mit in den Entwurf",
   assert.match(html, /id="timeTotal"/);
   assert.match(html, /testlauf\.js\?v=\d+/);
 });
+
+// DEBUG_Run-Tor (lib/debug-run.js) hat eine eigene Datei. Sie laeuft hier mit,
+// damit package.json frei bleibt (offener PR #37 aendert dieselbe Zeile).
+require("./debug-run.test");

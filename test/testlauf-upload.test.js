@@ -237,7 +237,7 @@ test("Server: /api/testlauf/hochladen schiebt und meldet, nur am SL-Rechner", as
   const dataDir = path.join(base, "data");
   const port = 35000 + Math.floor(Math.random() * 2000);
   const child = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, EMBER_DATA: dataDir, EMBER_PORT: String(port), EMBER_HOST: "127.0.0.1", EMBER_TESTLAUF_REPO: repo, LEGION_WEBHOOK_URL: "", LEGION_WEBHOOK_KEY: "" },
+    env: { ...process.env, EMBER_DATA: dataDir, EMBER_PORT: String(port), EMBER_HOST: "127.0.0.1", DYE_DEBUG_RUN_PFLICHT: "0", EMBER_TESTLAUF_REPO: repo, LEGION_WEBHOOK_URL: "", LEGION_WEBHOOK_KEY: "" },
     stdio: "ignore",
   });
   const request = (method, url, { headers = {}, body } = {}) => new Promise((resolve, reject) => {

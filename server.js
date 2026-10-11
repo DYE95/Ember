@@ -22,8 +22,9 @@ const slpin = require("./lib/slpin");
 const soloGame = require("./lib/solo-game");
 const leitstelle = require("./lib/leitstelle");
 const testlauf = require("./lib/testlauf");
+const debugRun = require("./lib/debug-run");
 const spur = require("./lib/spur");
-const { isGm, recordGmKey, isLocalRequest, requestAddress } = require("./lib/auth");
+const { isGm, recordGmKey, isLocalRequest, requestAddress, viaProxy } = require("./lib/auth");
 const { parseRange } = require("./lib/range");
 
 const PORT = Number(process.env.EMBER_PORT || 3478);
@@ -120,8 +121,24 @@ function leanSessions(view) {
   return view;
 }
 
+// DEBUG_Run-Tor (lib/debug-run.js): Tunnel-Spieler erst nach dem heutigen
+// DEBUG_Run. Fuer jede Tunnel-Anfrage gefragt, darum 1 s im Speicher.
+let gateCache = null;
+function gate() {
+  const now = Date.now();
+  if (gateCache && now - gateCache.at < 1000) return gateCache.value;
+  const value = debugRun.status(DATA);
+  gateCache = { at: now, value };
+  return value;
+}
+function gateChanged() {
+  gateCache = null;
+  emitState();
+}
+
 function snapshot() {
-  return { ...leanSessions(store.publicView(store.read())), presence: presenceList(), lan: { port: PORT, addresses: addresses(), remote: remoteUrl() } };
+  const g = gate();
+  return { ...leanSessions(store.publicView(store.read())), presence: presenceList(), lan: { port: PORT, addresses: addresses(), remote: remoteUrl(), online: g.open, gate: g.open ? "" : g.text } };
 }
 
 function broadcast(payload) {
@@ -383,6 +400,11 @@ const testlaufCtx = {
   version: () => leitstelle.version(),
   // Fuer Tests: anderes Repo als Ziel fuer den Upload (Standard: dieser Ordner).
   repoRoot: process.env.EMBER_TESTLAUF_REPO || __dirname,
+  // "Hochladen & Legion Bescheid geben" geschafft: DEBUG_Run-Tor pruefen.
+  onUploaded(name, out) {
+    if (debugRun.markUploaded(DATA, name, out)) console.log("  DEBUG_Run hochgeladen – Tisch ist online.");
+    gateChanged();
+  },
 };
 
 async function handleApi(req, res, url) {
@@ -391,12 +413,25 @@ async function handleApi(req, res, url) {
 
   if (await testlauf.handleApi(req, res, url, testlaufCtx)) return;
 
+  // DEBUG_Run-Tor: Stand und Notausgang, nur dieser Rechner.
+  if (p === "/api/debug-run" || p === "/api/debug-run/notausgang") {
+    if (!isLocalRequest(req)) { req.resume(); return send(res, 403, { error: "Nur dieser Rechner." }); }
+    if (method === "GET" && p === "/api/debug-run") return send(res, 200, gate());
+    if (method === "POST" && p === "/api/debug-run/notausgang") {
+      await readJson(req);
+      const out = debugRun.override(DATA, { who: "localhost" });
+      console.log("  Notausgang: ohne DEBUG_Run online (steht in data\\debug-run.log).");
+      gateChanged();
+      return send(res, 200, out);
+    }
+  }
+
   // Leitstelle der Startseite: nur dieser Rechner, nie ueber den Tunnel.
   if (method === "GET" && (p === "/api/leitstelle" || p === "/api/leitstelle/version")) {
     if (!isLocalRequest(req)) return send(res, 403, { error: "Nur dieser Rechner." });
     if (p === "/api/leitstelle/version") return send(res, 200, leitstelle.version());
     return send(res, 200, leitstelle.status({
-      dataDir: DATA, startedAt: STARTED_AT, port: PORT, presence: presenceList(), lan: addresses(), remote: remoteUrl(), code: codestand.check(),
+      dataDir: DATA, startedAt: STARTED_AT, port: PORT, presence: presenceList(), lan: addresses(), remote: remoteUrl(), code: codestand.check(), gate: gate(),
     }));
   }
 
@@ -1697,6 +1732,16 @@ const server = http.createServer(async (req, res) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("Referrer-Policy", "same-origin");
+    // Vor dem heutigen DEBUG_Run kommt ueber den Tunnel niemand an den Tisch.
+    // LAN und dieser Rechner laufen normal weiter.
+    if (viaProxy(req) && !gate().open) {
+      req.resume();
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Retry-After", "20");
+      if (url.pathname.startsWith("/api/")) return send(res, 503, { error: `${debugRun.WAIT_TEXT}.`, debugRun: true });
+      res.writeHead(503, { "Content-Type": "text/html; charset=utf-8" });
+      return res.end(debugRun.waitPage());
+    }
     if (url.pathname.startsWith("/api/")) {
       if (crossSiteBlocked(req.method, req.headers, [remoteUrl()])) {
         return send(res, 403, { error: "Fremde Seite. Bitte Ember direkt öffnen." });
@@ -1720,7 +1765,8 @@ const server = http.createServer(async (req, res) => {
       }
       return serveFile(res, path.join(PUBLIC, "home.html"), req);
     }
-    if (["/testlauf", "/testlauf/", "/testlauf.html"].includes(url.pathname)) {
+    // DEBUG_Run (frueher Testlauf): alte Adresse bleibt, /debug-run ist neu.
+    if (["/testlauf", "/testlauf/", "/testlauf.html", "/debug-run", "/debug-run/"].includes(url.pathname)) {
       if (!isLocalRequest(req)) {
         res.writeHead(302, { Location: "/player", "Cache-Control": "no-store" });
         return res.end();
