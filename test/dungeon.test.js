@@ -260,3 +260,7 @@ test("über viele Läufe greifen Gegner wirklich an (echte Würfel)", () => {
   assert.ok(attacks > 50);
   assert.ok(counters / attacks > 0.3, `${counters} Gegenzüge bei ${attacks} Angriffen`);
 });
+
+// Zweiter Dungeon (Versunkene Krypta) hat eine eigene Datei. Sie laeuft hier mit,
+// damit package.json frei bleibt (offener PR #37 aendert dieselbe Zeile).
+require("./dungeon-krypta.test");
