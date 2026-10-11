@@ -124,8 +124,12 @@ neu). WLAN und dieser Rechner laufen immer normal.
 
 ## Solo-Spiel (`/solo`)
 
-Ein Held, ein kurzer Dungeon (sieben Räume, fünf davon auf dem Weg, zuletzt der
-Glutwächter). Daggerheart-Regeln wie am Tisch: Duality-Wurf mit Hope- und
+Ein Held, ein kurzer Dungeon, beim Start wählbar:
+
+- **Asche unter der Schwelle**: sieben Räume, fünf davon auf dem Weg, zuletzt der Glutwächter
+- **Die versunkene Krypta**: acht Räume (eine Ebene mit drei Wegen), fünf auf dem Weg, neue Gegner Moorlicht, Schlickranke und Treibgut-Koloss, zuletzt der Schleusenwärter. Gleich schwer wie die Glut.
+
+Daggerheart-Regeln wie am Tisch: Duality-Wurf mit Hope- und
 Fear-W12, Experiences kosten Hope, Schaden gegen Major/Severe, Armor fängt eine
 Stufe ab, kurze Rast mit zwei Aktionen. Nach einem Sieg gibt es ein Level-Up.
 

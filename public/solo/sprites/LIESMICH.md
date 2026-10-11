@@ -15,5 +15,7 @@ hier ablegen, die Seite nimmt sie ohne Codeänderung. Sie werden mit
 | lantern.png | Licht-Motiv oben, Glutwächter, Niederlage |
 | chest.png | Sieg, Räume |
 | crate.png, barrel.png, chair.png, bookshelf.png, lamp.png, plant.png | Requisiten in den Räumen (Barnacle = barrel) |
-| key.png, flashlight.png, document.png, backpack.png | noch frei |
+| key.png | Schleusenwärter (Boss der Versunkenen Krypta) |
+| lamp.png, plant.png, crate.png | auch Moorlicht, Schlickranke, Treibgut-Koloss in der Krypta |
+| flashlight.png, document.png, backpack.png | noch frei |
 | btn*.png, panel-*.png, bar.png, line.png | Rahmen aus dem Bogen, noch als CSS nachgebaut |

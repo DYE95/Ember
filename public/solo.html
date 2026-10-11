@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ember · Solo</title>
   <link rel="icon" href="/img/ember-icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="/solo/solo-game.css?v=3" />
+  <link rel="stylesheet" href="/solo/solo-game.css?v=4" />
 </head>
 <body class="sg">
   <header class="sg-top">
@@ -58,8 +58,9 @@
   <div class="sg-overlay" id="startScreen" hidden>
     <div class="frame sg-dialog wide">
       <div class="sg-start-art"><img class="px" src="/solo/sprites/crate.png" alt="" /><img class="px" src="/solo/sprites/lantern.png" alt="" /><img class="px" src="/solo/sprites/chest.png" alt="" /></div>
-      <h1>Asche unter der Schwelle · Solo</h1>
-      <p class="sg-text">Ein Held, sieben Räume, ein Glutwächter. Wähle deinen Bogen.</p>
+      <h1>Solo · Dungeon-Lauf</h1>
+      <p class="sg-text">Ein Held, ein Dungeon, ein Boss. Erst den Dungeon wählen, dann deinen Bogen.</p>
+      <div class="sg-dungeons" id="dungeons" role="radiogroup" aria-label="Dungeon"></div>
       <div class="sg-continue" id="continueBox" hidden>
         <button class="sg-btn primary" id="btnContinue" type="button">Weiterspielen</button>
         <span class="sg-sub" id="continueText"></span>
@@ -97,6 +98,8 @@
         <label class="sg-field" id="xpField" hidden>Name der Experience <input id="xpName" maxlength="40" placeholder="z. B. Glutläufer" /></label>
         <p class="sg-sub" id="levelText"></p>
       </div>
+      <p class="sg-sub">Nächster Lauf in:</p>
+      <div class="sg-dungeons small" id="endDungeons" role="radiogroup" aria-label="Dungeon für den nächsten Lauf"></div>
       <div class="sg-row">
         <button class="sg-btn primary" id="btnNextRun" type="button">Neuer Lauf</button>
         <button class="sg-btn" id="btnNewHero" type="button">Anderer Held</button>
@@ -126,6 +129,6 @@
     </div>
   </div>
 
-  <script src="/solo/solo-game.js?v=3"></script>
+  <script src="/solo/solo-game.js?v=4"></script>
 </body>
 </html>
