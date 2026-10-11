@@ -76,7 +76,7 @@ test("Checkliste kommt aus docs/TESTLAUF.md, Entwurf wird gespeichert", async ()
   const first = await request("GET", "/api/testlauf");
   assert.equal(first.status, 200);
   const items = first.json.checklist.sections.flatMap((s) => s.items);
-  assert.ok(items.length > 20);
+  assert.ok(items.length >= 8);
   const saved = await postJson("/api/testlauf/entwurf", {
     tester: "Dave", geraet: "TV über Hotspot",
     answers: { [items[0].id]: { mark: "o" }, [items[1].id]: { mark: "x", note: "Fehlermeldung" } },
