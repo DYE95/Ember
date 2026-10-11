@@ -93,7 +93,7 @@ test("Spieler hochkant: Seite scrollt statt Karte über den Knöpfen, 16px-Felde
   const narrow = html.slice(html.indexOf("@media (max-width: 959px)"), html.indexOf("@media (min-width: 960px)"));
   assert.match(narrow, /overflow: visible/);
   assert.match(narrow, /font-size: 16px/);
-  assert.match(html, /\/js\/map\.js\?v=14/);
+  assert.match(html, /\/js\/map\.js\?v=(1[4-9]|[2-9]\d)"/); // mindestens 14
 });
 
 test("Ping: Anzeige haengt an der Empfangszeit, nicht an der Serveruhr", () => {
@@ -114,7 +114,7 @@ test("Spieler: Sitz wird nach Entsperren aus dem Speicher geholt und neu angemel
 
 test("Spieler: map.js und CSS-Versionen sind hochgezählt", () => {
   const html = read("public", "player.html");
-  assert.match(html, /\/js\/map\.js\?v=14/);
+  assert.match(html, /\/js\/map\.js\?v=(1[4-9]|[2-9]\d)"/); // mindestens 14
   assert.match(html, /\/css\/ember\.css\?v=14/);
   assert.match(html, /\/js\/player\.js\?v=(2\d)/);
 });

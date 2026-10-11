@@ -135,7 +135,7 @@ function renderRoles() {
   const menu = $("#roleMenu");
   if (!menu) return;
   const chars = profileChars();
-  menu.innerHTML = "<p class='hint'>Rolle in diesem Tab. Tab öffnet denselben Bogen daneben, ohne diesen Sitz zu übernehmen.</p>" + chars.map((c) => `<button class="card" data-role="${c.id}"><div class="name">${c.name}</div><div class="meta">${c.class || "Spieler"}</div></button><a class="btn tiny" data-tab="${c.id}" href="${playerHref(c.id)}" target="_blank" rel="noopener">Tab</a>`).join("") + `<button class="card" data-role="guest"><div class="name">Gast</div><div class="meta">Karte, kein Bogen</div></button><a class="btn tiny" data-tab="guest" href="${playerHref("", true)}" target="_blank" rel="noopener">Gast-Tab</a><a class="btn" href="/">Spielleitung</a>`;
+  menu.innerHTML = "<p class='hint'>Rolle in diesem Tab. Tab öffnet denselben Bogen daneben, ohne diesen Sitz zu übernehmen.</p>" + chars.map((c) => `<button class="card" data-role="${esc(c.id)}"><div class="name">${esc(c.name)}</div><div class="meta">${esc(c.class || "Spieler")}</div></button><a class="btn tiny" data-tab="${c.id}" href="${playerHref(c.id)}" target="_blank" rel="noopener">Tab</a>`).join("") + `<button class="card" data-role="guest"><div class="name">Gast</div><div class="meta">Karte, kein Bogen</div></button><a class="btn tiny" data-tab="guest" href="${playerHref("", true)}" target="_blank" rel="noopener">Gast-Tab</a><a class="btn" href="/">Spielleitung</a>`;
   menu.querySelectorAll("[data-role]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const role = btn.getAttribute("data-role");
@@ -199,7 +199,7 @@ function renderGate() {
   chars.forEach((c) => {
     const b = document.createElement("button");
     b.className = "card";
-    b.innerHTML = `<div class="name">${c.name}</div><div class="meta">${c.class || "—"} · Hope ${c.hope}</div>`;
+    b.innerHTML = `<div class="name">${esc(c.name)}</div><div class="meta">${esc(c.class || "—")} · Hope ${esc(c.hope)}</div>`;
     b.addEventListener("click", () => sit(c.id, false));
     list.appendChild(b);
     const tab = document.createElement("a");
@@ -302,12 +302,12 @@ function render() {
   if (hands) {
     const list = (state._handouts || sesTurn?.handouts || []).filter((h) => !h.sealed && (!h.toId || h.toId === pc.id));
     hands.classList.toggle("hidden", !list.length);
-    hands.innerHTML = list.map((h) => `<div class="card"><div class="name">${h.toName ? h.toName + " · " : ""}${h.title}</div><div class="meta">${h.text}</div></div>`).join("");
+    hands.innerHTML = list.map((h) => `<div class="card"><div class="name">${h.toName ? esc(h.toName) + " · " : ""}${esc(h.title)}</div><div class="meta">${esc(h.text)}</div></div>`).join("");
     fetch("/api/session/handouts?characterId=" + encodeURIComponent(pc.id)).then((r) => r.json()).then((data) => {
       state._handouts = data.handouts || [];
       const mine = state._handouts.filter((h) => !h.toId || h.toId === pc.id);
       hands.classList.toggle("hidden", !mine.length);
-      hands.innerHTML = mine.map((h) => `<div class="card"><div class="name">${h.toName ? h.toName + " · " : ""}${h.title}</div><div class="meta">${h.text || ""}</div></div>`).join("");
+      hands.innerHTML = mine.map((h) => `<div class="card"><div class="name">${h.toName ? esc(h.toName) + " · " : ""}${esc(h.title)}</div><div class="meta">${esc(h.text || "")}</div></div>`).join("");
     }).catch(() => {});
   }
   const playLog = $("#playLog");
@@ -331,7 +331,7 @@ function render() {
   const expPick = $("#expPick");
   if (expPick) {
     const prevExp = expPick.value;
-    expPick.innerHTML = `<option value="">—</option>` + (pc.experiences || []).map((e, i) => `<option value="${i}">${e.name} +${e.bonus || 0}</option>`).join("");
+    expPick.innerHTML = `<option value="">—</option>` + (pc.experiences || []).map((e, i) => `<option value="${i}">${esc(e.name)} +${esc(e.bonus || 0)}</option>`).join("");
     if (prevExp) expPick.value = prevExp;
   }
 }
@@ -347,7 +347,7 @@ function renderSpur(ses, pc) {
   box.classList.remove("hidden");
   const left = event.endsAt ? Math.max(0, Math.ceil((event.endsAt - Date.now()) / 1000)) : 0;
   const href = event.href + "?spur=1&back=" + encodeURIComponent("/player");
-  box.innerHTML = `<div class="name">Ereignis · ${event.title}</div><div class="meta">${event.ask?.question || event.stake || event.blurb || ""} · ${left}s · ${event.payout === "fear" ? "Fear an den Tisch" : "Hope an den Besten"}</div><a class="btn tiny" href="${href}">Spielen</a>`;
+  box.innerHTML = `<div class="name">Ereignis · ${esc(event.title)}</div><div class="meta">${esc(event.ask?.question || event.stake || event.blurb || "")} · ${left}s · ${event.payout === "fear" ? "Fear an den Tisch" : "Hope an den Besten"}</div><a class="btn tiny" href="${href}">Spielen</a>`;
 }
 
 $("#btnGuest")?.addEventListener("click", () => sit("", true));
@@ -403,7 +403,7 @@ async function playerRoll(table) {
   const pick = $("#foePick");
   if (pick && pick.options.length !== foes.length + 1) {
     const prev = pick.value;
-    pick.innerHTML = `<option value="">nächster</option>` + foes.map((t) => `<option value="${t.id}">${t.label} · ${t.difficulty}</option>`).join("");
+    pick.innerHTML = `<option value="">nächster</option>` + foes.map((t) => `<option value="${esc(t.id)}">${esc(t.label)} · ${esc(t.difficulty)}</option>`).join("");
     if (foes.some((t) => t.id === prev)) pick.value = prev;
   }
   const payload = {

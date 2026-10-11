@@ -26,7 +26,7 @@ test("ohne Bogen: Knöpfe gedimmt per aria-disabled, Klick erklärt es", () => {
   assert.match(js, /button\[aria-disabled='true'\]/);
   assert.match(js, /Noch kein Bogen\./);
   assert.match(html, /\.btn\[aria-disabled="true"\]\s*\{[^}]*opacity/);
-  assert.match(html, /solo\.js\?v=4/, "Cache-Version hochgezählt");
+  assert.match(html, /solo\.js\?v=([4-9]|\d\d+)"/, "Cache-Version hochgezählt");
 });
 
 test("solo.js nimmt die PIN aus /api/sl-pin vor einem alten Browser-Schlüssel", () => {

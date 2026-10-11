@@ -2,6 +2,10 @@ const MapKit = { draggingId: null, lastSig: "", tool: "move", zoneStart: null, v
 
 function gm(body) { return { as: "gm", ...body, gmKey: localStorage.getItem("ember.gmKey") || "" }; }
 
+// Texte aus dem Spielstand (Token-Namen, Zonen) nie roh ins HTML: ein "<" im Namen
+// zerlegte sonst die Karte.
+function mapEsc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
 function initials(label) {
   return String(label || "?").split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -111,7 +115,7 @@ function showTokenCard(stage, token) {
     card.className = "map-card";
     stage.appendChild(card);
   }
-  card.innerHTML = `<b>${token.label || "Token"}</b><span>${token.kind || "figur"} · ${Math.round(token.x || 0)}, ${Math.round(token.y || 0)}</span>`;
+  card.innerHTML = `<b>${mapEsc(token.label || "Token")}</b><span>${mapEsc(token.kind || "figur")} · ${Math.round(token.x || 0)}, ${Math.round(token.y || 0)}</span>`;
   card.classList.add("on");
 }
 function renderMap(stage, state, opts = {}) {
@@ -153,7 +157,7 @@ function renderMap(stage, state, opts = {}) {
     const pc = token.characterId && (state.characters || []).find((c) => c.id === token.characterId);
     const face = token.portrait || pc?.portrait || "";
     if (pc?.color) el.style.background = pc.color;
-    el.innerHTML = `<span class="ring"></span>${face ? `<img src="${face}" alt="" draggable="false" />` : `<span>${initials(token.label)}</span>`}<span class="token-label">${token.label}</span>`;
+    el.innerHTML = `<span class="ring"></span>${face ? `<img src="${mapEsc(face)}" alt="" draggable="false" />` : `<span>${mapEsc(initials(token.label))}</span>`}<span class="token-label">${mapEsc(token.label)}</span>`;
   });
   drawFog(fog, stage, map, opts);
   drawPing(stage, ses);
@@ -271,7 +275,7 @@ function drawOverlays(stage, ses, opts) {
     el.className = "zone" + (z.sprung ? " sprung" : "") + (z.secret ? " secret" : "");
     el.style.left = z.x + "%"; el.style.top = z.y + "%";
     el.style.width = z.w + "%"; el.style.height = z.h + "%";
-    el.innerHTML = `<span>${z.label}</span>`;
+    el.innerHTML = `<span>${mapEsc(z.label)}</span>`;
     worldOf(stage).appendChild(el);
   });
   const map = ses?.map || {};
