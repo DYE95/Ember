@@ -10,6 +10,8 @@ let busy = false;
 let mods = { experiences: [], allIn: false };
 let restPicks = [];
 let levelPick = "";
+// Gewaehlter Dungeon fuer den naechsten Lauf (Start- und Endbildschirm).
+let dungeonPick = "";
 
 function el(tag, attrs = {}, ...kids) {
   const node = document.createElement(tag);
@@ -201,6 +203,7 @@ function renderMap() {
   box.replaceChildren(svg, ...nodes);
   const s = game.save.stats;
   const facts = [
+    ["Dungeon", r.dungeonName || "Asche unter der Schwelle"],
     ["Lauf", `#${s.runs} · Tier ${r.tier}`],
     ["Bilanz", tally(s)],
     ["Kurze Rast", `${3 - r.shortRests} von 3 übrig`],
@@ -236,8 +239,10 @@ function renderOverlays() {
   $("#endTitle").textContent = won ? "Sieg!" : "Gefallen";
   const s = game.save.stats;
   $("#endText").textContent = won
-    ? `${r.hero.name} hat den Glutwächter besiegt und ${r.inventory.gold} Gold mitgebracht. Bilanz: ${tally(s)}.`
+    ? `${r.hero.name} hat den ${r.bossName || "Glutwächter"} besiegt und ${r.inventory.gold} Gold mitgebracht. Bilanz: ${tally(s)}.`
     : `${r.hero.name} fällt im Raum „${room().name}“. Der Held bleibt Level ${game.save.profile.level}; ein neuer Lauf beginnt frisch. Bilanz: ${tally(s)}.`;
+  if (!dungeonPick) dungeonPick = r.dungeon || "glut";
+  renderDungeons($("#endDungeons"), renderOverlays);
   const pending = Boolean(game.save.pendingLevel);
   $("#levelBox").hidden = !pending;
   $("#btnNextRun").textContent = pending ? "Level-Up und neuer Lauf" : "Neuer Lauf";
@@ -265,8 +270,21 @@ function render() {
   renderOverlays();
 }
 
+// Auswahl der Dungeons als grosse Knoepfe (Wii-Zeiger), Boss-Sprite daneben.
+function renderDungeons(box, again) {
+  const list = (game.meta && game.meta.dungeons) || [];
+  if (!dungeonPick || !list.some((d) => d.id === dungeonPick)) dungeonPick = list.length ? list[0].id : "";
+  box.hidden = list.length < 2;
+  box.replaceChildren(...list.map((d) => el("button", {
+    class: `sg-dungeon${d.id === dungeonPick ? " on" : ""}`, type: "button", role: "radio", "aria-checked": String(d.id === dungeonPick),
+    onclick: () => { dungeonPick = d.id; again(); },
+  }, sprite(d.sprite), el("b", { text: d.name }), el("span", { text: d.text }))));
+}
+
 function renderStart() {
   const save = game.save;
+  if (!dungeonPick && save.run && save.run.dungeon) dungeonPick = save.run.dungeon;
+  renderDungeons($("#dungeons"), renderStart);
   const live = save.run && !["won", "lost"].includes(save.run.status);
   $("#continueBox").hidden = !save.profile;
   if (save.profile) {
@@ -391,7 +409,7 @@ async function newGame(h) {
   if (game.save.profile && game.save.run && !["won", "lost"].includes(game.save.run.status)
     && !confirm(`Laufendes Spiel mit ${game.save.profile.name} beenden und neu anfangen?`)) return;
   try {
-    game = await call("/api/solo/game/new", { hero: h.key });
+    game = await call("/api/solo/game/new", { hero: h.key, dungeon: dungeonPick });
     notice = null;
     levelPick = "";
     $("#startScreen").hidden = true;
@@ -417,7 +435,7 @@ async function nextRun() {
       say(res.text, "good");
       levelPick = "";
     }
-    game = await call("/api/solo/game/run", {});
+    game = await call("/api/solo/game/run", { dungeon: dungeonPick });
     resetDice();
     render();
   } catch (err) {
